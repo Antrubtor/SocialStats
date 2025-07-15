@@ -1,4 +1,4 @@
-import pathlib
+from src.utils import *
 
 class SocialNetwork:
     def __init__(self, path):
@@ -6,3 +6,6 @@ class SocialNetwork:
 
     def __str__(self):
         return f"{self.__class__.__name__}: {self.path.relative_to(f"social_exports/{self.__class__.__name__}")}"
+
+    def start_process(self):
+        return NotImplemented
