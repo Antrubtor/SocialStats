@@ -1,6 +1,7 @@
 import sys
 import json
 import zipfile
+from tqdm import tqdm
 from InquirerPy import inquirer
 from datetime import datetime, timedelta
 
@@ -24,9 +25,9 @@ def ask(question, options):
 
 def ask_number(question):
     if sys.stdin.isatty():
-        return inquirer.number(
+        return int(inquirer.number(
             message=question
-        ).execute()
+        ).execute())
     else:
         print(question)
         while True:

@@ -1,3 +1,5 @@
+import struct
+from collections import defaultdict
 from src.socialnetwork import *
 
 class SnapChat(SocialNetwork):
@@ -10,7 +12,7 @@ class SnapChat(SocialNetwork):
         selected.execute()
 
     def messages_process(self):
-        # try:
+        try:
             with zipfile.ZipFile(self.path, mode="r") as package:
                 with package.open("json/account.json", mode="r") as account:
                     sections = json.load(account)
@@ -18,16 +20,37 @@ class SnapChat(SocialNetwork):
                     creation_date = sections["Basic Information"]["Creation Date"]
                     print(f"Your account named {pseudo}, created on {creation_date}, was found")
 
+                media_ids_files = {}
+                for filename in package.namelist():
+                    if filename.startswith("chat_media/") and "_" in filename:
+                        try:
+                            media_ids_files[filename.split("_")[2].split(".")[0]] = filename
+                        except IndexError:
+                            continue
+
+                min_messages = ask_number("Minimum number of messages per contact (0 for no limit set)?")
+
                 with package.open("json/chat_history.json", mode="r") as msg:
                     sections = json.load(msg)
                     messages_per_day = {} # date : { name : (nb_you, nb_oth), name : (nb_you, nb_oth) }
                     hour_distribution = [0] * 24
-                    per_contact_stats = {}  # contact: (char_you, char_oth, msg_you, msg_oth, voice_msg_you, voice_msg_oth)
+                    per_contact_stats = defaultdict(list)
+
                     total_msg, total_chr = 0, 0
-                    for contact, messages in sections.items():
-                        for message in messages:
+                    for contact, messages in tqdm(sections.items()):
+                        if 0 >= min_messages > len(messages):
+                            continue
+
+                        msg_you = msg_oth = char_you = char_oth = voice_you = voice_oth = 0
+                        delays_you, delays_oth = [], []
+                        last_sender = None
+                        last_timestamp = None
+                        for message in tqdm(messages, leave=False):
                             is_you = message["IsSender"]
-                            dt = datetime.fromtimestamp(int(message["Created(microseconds)"]) // 1000)
+
+                            # Hour distribution
+                            timestamp_ms = int(message["Created(microseconds)"]) // 1000
+                            dt = datetime.fromtimestamp(timestamp_ms)
                             date_str = dt.strftime("%m/%d/%Y")
                             hour = dt.hour
                             if is_you:
@@ -35,34 +58,95 @@ class SnapChat(SocialNetwork):
                             if date_str not in messages_per_day:
                                 messages_per_day[date_str] = {}
 
+                            # Messages per day
                             nb_you, nb_oth = messages_per_day[date_str].get(contact, (0, 0))
                             if is_you:
-                                nb_oth += 1
-                            else:
                                 nb_you += 1
+                            else:
+                                nb_oth += 1
                             messages_per_day[date_str][contact] = (nb_you, nb_oth)
+
+                            # Number of messages and char by contact
                             content = message["Content"]
                             nb_chars = len(content) if message["Media Type"] == "TEXT" and content else 0
-                            char_you, char_oth, msg_you, msg_oth = per_contact_stats.get(contact, (0, 0, 0, 0))
                             if is_you:
-                                char_you += nb_chars
                                 msg_you += 1
+                                char_you += nb_chars
                             else:
-                                char_oth += nb_chars
                                 msg_oth += 1
-                            per_contact_stats[contact] = (char_you, char_oth, msg_you, msg_oth)
+                                char_oth += nb_chars
+
+                            # Voice message time
+                            media_id = message.get("Media IDs")
+                            if message["Media Type"] == "NOTE" and media_id:
+                                if media_id in media_ids_files:
+                                    duration = self.__get_mp4_duration(media_ids_files[media_id])
+                                    if is_you:
+                                        voice_you += duration
+                                    else:
+                                        voice_oth += duration
+
+                            # Message delay
+                            if last_sender is not None and last_sender != is_you and last_timestamp is not None:
+                                delay = abs(timestamp_ms - last_timestamp)
+                                if is_you:
+                                    delays_you.append(delay)
+                                else:
+                                    delays_oth.append(delay)
+                            last_sender = is_you
+                            last_timestamp = timestamp_ms
 
                             total_chr += nb_chars
                             total_msg += 1
+                        avg_delay_you = sum(delays_you) // len(delays_you) if delays_you else 0
+                        avg_delay_oth = sum(delays_oth) // len(delays_oth) if delays_oth else 0
+
+                        per_contact_stats["Contact"].append(contact)
+                        
+                        per_contact_stats["Messages"].append(msg_you + msg_oth)
+                        per_contact_stats["Messages sent by you"].append(msg_you)
+                        per_contact_stats["Messages sent by your contact"].append(msg_oth)
+
+                        per_contact_stats["Characters"].append(char_you + char_oth)
+                        per_contact_stats["Characters sent by you"].append(char_you)
+                        per_contact_stats["Characters sent by your contact"].append(char_oth)
+
+                        per_contact_stats["Vocal message time"].append(voice_you)
+                        per_contact_stats["Your vocal message time"].append(voice_you)
+                        per_contact_stats["Contact vocal message time"].append(voice_oth)
+
+                        per_contact_stats["Your answer delay"].append(avg_delay_you)
+                        per_contact_stats["Contact answer delay"].append(avg_delay_oth)
 
                     print(f"\nLoaded {total_msg} messages in total with {total_chr} characters")
-                    print(messages_per_day)
-                    # print(per_contact_stats)
-                    # print(hour_distribution)
                     return messages_per_day, per_contact_stats, hour_distribution
-        # except Exception as e:
-        #     print(e)
+        except Exception as e:
+            print(e)
 
+    def __get_mp4_duration(self, file_path):
+        """Directly reads the duration of an MP4 file by parsing the 'mvhd' box."""
+        try:
+            with zipfile.ZipFile(self.path, mode="r") as package:
+                with package.open(file_path, "r") as f:
+                    data = f.read()
+                    mvhd_pos = data.find(b'mvhd')
+                    if mvhd_pos == -1:
+                        print(f"Error: 'mvhd' not found in {file_path}")
+                        return 0
+                    mvhd_offset = mvhd_pos + 4
+                    version = data[mvhd_offset]
+
+                    if version == 0:
+                        time_scale, duration = struct.unpack(">II", data[mvhd_offset + 12: mvhd_offset + 20])
+                    elif version == 1:
+                        time_scale, duration = struct.unpack(">IQ", data[mvhd_offset + 20: mvhd_offset + 32])
+                    else:
+                        print(f"Error: Unknown version of mvhd for {file_path}")
+                        return 0
+                    return duration / time_scale if time_scale > 0 else 0
+        except Exception as e:
+            print(f"Error with {file_path} : {e}")
+            return 0
 
     def medias_process(self):
         print("Media processing")
