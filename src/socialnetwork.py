@@ -9,3 +9,10 @@ class SocialNetwork:
 
     def start_process(self):
         return NotImplemented
+
+    def messages_stats(self):
+        return NotImplemented
+
+    def messages_process(self):
+        per_contact_stats, messages_per_day, hour_distribution = self.messages_stats()
+        generate_excel(per_contact_stats, messages_per_day, hour_distribution, f"{self.__class__.__name__}.xlsx")

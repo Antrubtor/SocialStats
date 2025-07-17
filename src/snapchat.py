@@ -11,7 +11,7 @@ class SnapChat(SocialNetwork):
         selected = ask("What do you want to do with your Snapchat package?", actions)
         selected.execute()
 
-    def messages_process(self):
+    def messages_stats(self):
         try:
             with zipfile.ZipFile(self.path, mode="r") as package:
                 with package.open("json/account.json", mode="r") as account:
@@ -102,7 +102,7 @@ class SnapChat(SocialNetwork):
                         avg_delay_oth = sum(delays_oth) // len(delays_oth) if delays_oth else 0
 
                         per_contact_stats["Contact"].append(contact)
-                        
+
                         per_contact_stats["Messages"].append(msg_you + msg_oth)
                         per_contact_stats["Messages sent by you"].append(msg_you)
                         per_contact_stats["Messages sent by your contact"].append(msg_oth)
@@ -119,7 +119,7 @@ class SnapChat(SocialNetwork):
                         per_contact_stats["Contact answer delay"].append(avg_delay_oth)
 
                     print(f"\nLoaded {total_msg} messages in total with {total_chr} characters")
-                    return messages_per_day, per_contact_stats, hour_distribution
+                    return per_contact_stats, messages_per_day, hour_distribution
         except Exception as e:
             print(e)
 
