@@ -42,7 +42,7 @@ def ask_number(question):
                 print("Please enter a valid number.")
 
 
-def generate_excel(per_contact_stats, messages_per_day, hour_distribution, output_path="analysis.xlsx"):
+def generate_excel(per_contact_stats, messages_per_day, hour_distribution, excel_name="analysis.xlsx"):
     wb = Workbook()
 
     # 1. GLOBAL SHEET
@@ -209,7 +209,7 @@ def generate_excel(per_contact_stats, messages_per_day, hour_distribution, outpu
     line_chart.set_categories(cats)
     ws3.add_chart(line_chart, f"{get_column_letter(len(contacts) + 4)}2")
 
-    wb.save(output_path)
+    wb.save(excel_name)
 
 
 class Action:

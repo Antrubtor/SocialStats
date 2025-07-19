@@ -17,10 +17,9 @@ class Discord(SocialNetwork):
         return base_datetime + delta
 
 
-    def parse_discord_timestamp(self, ts):
-        return datetime.fromisoformat(ts.strip('"').replace("Z", "+00:00"))
-
-    def extract_voice_times_by_user(self, package, channels_name_id):
+    def __voice_times_by_user(self, package, channels_name_id):
+        def parse_discord_timestamp(ts):
+            return datetime.fromisoformat(ts.strip('"').replace("Z", "+00:00"))
         call_per_id = defaultdict(tuple)  # {rtc_connection_id: (channel_id, join_voice_channel, leave_voice_channel)}
         for file in package.infolist():
             if "events" in file.filename and file.filename.endswith(".json"):
@@ -37,17 +36,16 @@ class Discord(SocialNetwork):
                                 rtc = call_per_id[event["rtc_connection_id"]]
                                 if rtc is not None and rtc != ():
                                     end = rtc[2]
-                                call_per_id[event["rtc_connection_id"]] = (event["channel_id"], self.parse_discord_timestamp(event["timestamp"]), end)
+                                call_per_id[event["rtc_connection_id"]] = (event["channel_id"], parse_discord_timestamp(event["timestamp"]), end)
                             if event["event_type"] == "leave_voice_channel" and "rtc_connection_id" in event:
                                 start = None
                                 rtc = call_per_id[event["rtc_connection_id"]]
                                 if rtc is not None and rtc != ():
                                     start = rtc[1]
-                                call_per_id[event["rtc_connection_id"]] = (event["channel_id"], start, self.parse_discord_timestamp(event["timestamp"]))
+                                call_per_id[event["rtc_connection_id"]] = (event["channel_id"], start, parse_discord_timestamp(event["timestamp"]))
                         except:
                             print("Failed to parse event")
-        print(call_per_id)
-        call_per_user = defaultdict(timedelta)
+        call_per_user = defaultdict(timedelta)  # { user: time }
         total_voice_times = timedelta(0)
         max_time = timedelta(0)
         for rtc_id, call_data in call_per_id.items():
@@ -57,12 +55,11 @@ class Discord(SocialNetwork):
                 if call_data[0] in channels_name_id:
                     call_per_user[channels_name_id[call_data[0]]] += duration
                 total_voice_times += duration
-        print(call_per_user)
-        print(f"Total voice times: {total_voice_times} / max_time: {max_time}")
+        print(f"Your total call time is {total_voice_times} and your longest call was {max_time}.")
         return call_per_user
 
     def messages_stats(self):
-        # try:
+        try:
             with zipfile.ZipFile(self.path, mode="r") as package:
                 with package.open("Account/user.json", mode="r") as account:
                     sections = json.load(account)
@@ -73,7 +70,9 @@ class Discord(SocialNetwork):
 
                 with package.open("Messages/index.json", mode="r") as channel_list:
                     channels_name_id = json.load(channel_list)
-                self.extract_voice_times_by_user(package, channels_name_id)
+                    for chan_id, contact_name in channels_name_id.items():
+                        if "Direct Message with" in contact_name:
+                            channels_name_id[chan_id] = contact_name.replace("Direct Message with ", "")
                 min_messages = ask_number("Minimum number of messages per contact (0 for no limit set)?")
 
                 messages_per_day = {}  # date : { name : (nb_you, nb_oth), name : (nb_you, nb_oth) }
@@ -89,8 +88,6 @@ class Discord(SocialNetwork):
                         if contact_id not in channels_name_id:
                             continue
                         contact = channels_name_id[contact_id]
-                        if "Direct Message with" in contact:
-                            contact = contact.replace("Direct Message with ", "")
                         with package.open(filename, mode="r") as msg:
                             messages = json.load(msg)
 
@@ -130,6 +127,14 @@ class Discord(SocialNetwork):
                             per_contact_stats["Characters sent by you"].append(char_you)
                             per_contact_stats["Characters sent by your contact"].append(char_oth)
                 print(f"\nLoaded {total_msg} messages in total with {total_chr} characters")
-                return per_contact_stats, messages_per_day, hour_distribution
-        # except Exception as e:
-        #     print(e)
+                call_per_user = self.__voice_times_by_user(package, channels_name_id)
+                for user in per_contact_stats["Contact"]:
+                    if user not in call_per_user:
+                        per_contact_stats["Call time"].append("0h0m")
+                    else:
+                        hours, remainder = divmod(call_per_user[user].total_seconds(), 3600)
+                        minutes, _ = divmod(remainder, 60)
+                        per_contact_stats["Call time"].append(f"{int(hours)}h{int(minutes)}m")
+                return per_contact_stats, messages_per_day, hour_distribution, f"{self.__class__.__name__}.xlsx"
+        except Exception as e:
+            print(e)

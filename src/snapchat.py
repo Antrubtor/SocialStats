@@ -38,7 +38,7 @@ class SnapChat(SocialNetwork):
 
                     total_msg, total_chr = 0, 0
                     for contact, messages in tqdm(sections.items()):
-                        if 0 >= min_messages > len(messages):
+                        if min_messages > 0 and len(messages) < min_messages:
                             continue
 
                         msg_you = msg_oth = char_you = char_oth = voice_you = voice_oth = 0
@@ -119,7 +119,7 @@ class SnapChat(SocialNetwork):
                         per_contact_stats["Contact answer delay"].append(avg_delay_oth)
 
                     print(f"\nLoaded {total_msg} messages in total with {total_chr} characters")
-                    return per_contact_stats, messages_per_day, hour_distribution
+                    return per_contact_stats, messages_per_day, hour_distribution, f"{self.__class__.__name__}.xlsx"
         except Exception as e:
             print(e)
 
