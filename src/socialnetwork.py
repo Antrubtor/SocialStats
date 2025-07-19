@@ -5,7 +5,8 @@ class SocialNetwork:
         self.path = path
 
     def __str__(self):
-        return f"{self.__class__.__name__}: {self.path.relative_to(f"social_exports/{self.__class__.__name__}")}"
+        path = self.path.relative_to(f"social_exports/{self.__class__.__name__}")
+        return f"{self.__class__.__name__}: {path}"
 
     def start_process(self):
         return NotImplemented

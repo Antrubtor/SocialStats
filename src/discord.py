@@ -16,8 +16,53 @@ class Discord(SocialNetwork):
         delta = timedelta(0, 0, 0, convert)
         return base_datetime + delta
 
+
+    def parse_discord_timestamp(self, ts):
+        return datetime.fromisoformat(ts.strip('"').replace("Z", "+00:00"))
+
+    def extract_voice_times_by_user(self, package, channels_name_id):
+        call_per_id = defaultdict(tuple)  # {rtc_connection_id: (channel_id, join_voice_channel, leave_voice_channel)}
+        for file in package.infolist():
+            if "events" in file.filename and file.filename.endswith(".json"):
+                with package.open(file, "r") as event_file:
+                    print(file.filename)
+                    for raw_line in tqdm(event_file, leave=False):
+                        try:
+                            line = raw_line.decode("utf-8").strip()
+                            if not line:
+                                continue
+                            event = json.loads(line)
+                            if event["event_type"] == "join_voice_channel"  and "rtc_connection_id" in event:
+                                end = None
+                                rtc = call_per_id[event["rtc_connection_id"]]
+                                if rtc is not None and rtc != ():
+                                    end = rtc[2]
+                                call_per_id[event["rtc_connection_id"]] = (event["channel_id"], self.parse_discord_timestamp(event["timestamp"]), end)
+                            if event["event_type"] == "leave_voice_channel" and "rtc_connection_id" in event:
+                                start = None
+                                rtc = call_per_id[event["rtc_connection_id"]]
+                                if rtc is not None and rtc != ():
+                                    start = rtc[1]
+                                call_per_id[event["rtc_connection_id"]] = (event["channel_id"], start, self.parse_discord_timestamp(event["timestamp"]))
+                        except:
+                            print("Failed to parse event")
+        print(call_per_id)
+        call_per_user = defaultdict(timedelta)
+        total_voice_times = timedelta(0)
+        max_time = timedelta(0)
+        for rtc_id, call_data in call_per_id.items():
+            if call_data[1] and call_data[2]:
+                duration = call_data[2] - call_data[1]
+                max_time = max(max_time, duration)
+                if call_data[0] in channels_name_id:
+                    call_per_user[channels_name_id[call_data[0]]] += duration
+                total_voice_times += duration
+        print(call_per_user)
+        print(f"Total voice times: {total_voice_times} / max_time: {max_time}")
+        return call_per_user
+
     def messages_stats(self):
-        try:
+        # try:
             with zipfile.ZipFile(self.path, mode="r") as package:
                 with package.open("Account/user.json", mode="r") as account:
                     sections = json.load(account)
@@ -28,7 +73,7 @@ class Discord(SocialNetwork):
 
                 with package.open("Messages/index.json", mode="r") as channel_list:
                     channels_name_id = json.load(channel_list)
-
+                self.extract_voice_times_by_user(package, channels_name_id)
                 min_messages = ask_number("Minimum number of messages per contact (0 for no limit set)?")
 
                 messages_per_day = {}  # date : { name : (nb_you, nb_oth), name : (nb_you, nb_oth) }
@@ -37,7 +82,6 @@ class Discord(SocialNetwork):
 
                 total_msg, total_chr = 0, 0
                 for filename in tqdm(package.namelist()):
-                    # print(filename)
                     if filename.startswith("Messages/") and filename.endswith("/messages.json"):
                         contact_id = re.search(r"c(\d+)/", filename)
                         if contact_id:
@@ -85,9 +129,7 @@ class Discord(SocialNetwork):
                             per_contact_stats["Characters"].append(char_you + char_oth)
                             per_contact_stats["Characters sent by you"].append(char_you)
                             per_contact_stats["Characters sent by your contact"].append(char_oth)
-
                 print(f"\nLoaded {total_msg} messages in total with {total_chr} characters")
                 return per_contact_stats, messages_per_day, hour_distribution
-            return {}, {}, []
-        except Exception as e:
-            print(e)
+        # except Exception as e:
+        #     print(e)
