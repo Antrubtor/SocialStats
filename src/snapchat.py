@@ -1,5 +1,3 @@
-import struct
-from collections import defaultdict
 from src.socialnetwork import *
 
 class SnapChat(SocialNetwork):
@@ -80,7 +78,7 @@ class SnapChat(SocialNetwork):
                             media_id = message.get("Media IDs")
                             if message["Media Type"] == "NOTE" and media_id:
                                 if media_id in media_ids_files:
-                                    duration = self.__get_mp4_duration(media_ids_files[media_id])
+                                    duration = get_mp4_duration(self.path, media_ids_files[media_id])
                                     if is_you:
                                         voice_you += duration
                                     else:
@@ -122,31 +120,6 @@ class SnapChat(SocialNetwork):
                     return per_contact_stats, messages_per_day, hour_distribution, f"{self.__class__.__name__}.xlsx"
         except Exception as e:
             print(e)
-
-    def __get_mp4_duration(self, file_path):
-        """Directly reads the duration of an MP4 file by parsing the 'mvhd' box."""
-        try:
-            with zipfile.ZipFile(self.path, mode="r") as package:
-                with package.open(file_path, "r") as f:
-                    data = f.read()
-                    mvhd_pos = data.find(b'mvhd')
-                    if mvhd_pos == -1:
-                        print(f"Error: 'mvhd' not found in {file_path}")
-                        return 0
-                    mvhd_offset = mvhd_pos + 4
-                    version = data[mvhd_offset]
-
-                    if version == 0:
-                        time_scale, duration = struct.unpack(">II", data[mvhd_offset + 12: mvhd_offset + 20])
-                    elif version == 1:
-                        time_scale, duration = struct.unpack(">IQ", data[mvhd_offset + 20: mvhd_offset + 32])
-                    else:
-                        print(f"Error: Unknown version of mvhd for {file_path}")
-                        return 0
-                    return duration / time_scale if time_scale > 0 else 0
-        except Exception as e:
-            print(f"Error with {file_path} : {e}")
-            return 0
 
     def medias_process(self):
         print("Media processing")

@@ -1,6 +1,5 @@
 import re
 from src.socialnetwork import *
-from collections import defaultdict
 
 class Discord(SocialNetwork):
     def start_process(self):
@@ -21,10 +20,9 @@ class Discord(SocialNetwork):
         def parse_discord_timestamp(ts):
             return datetime.fromisoformat(ts.strip('"').replace("Z", "+00:00"))
         call_per_id = defaultdict(tuple)  # {rtc_connection_id: (channel_id, join_voice_channel, leave_voice_channel)}
-        for file in package.infolist():
+        for file in tqdm(package.infolist()):
             if "events" in file.filename and file.filename.endswith(".json"):
                 with package.open(file, "r") as event_file:
-                    print(file.filename)
                     for raw_line in tqdm(event_file, leave=False):
                         try:
                             line = raw_line.decode("utf-8").strip()
@@ -90,7 +88,6 @@ class Discord(SocialNetwork):
                         contact = channels_name_id[contact_id]
                         with package.open(filename, mode="r") as msg:
                             messages = json.load(msg)
-
                             if min_messages > 0 and len(messages) < min_messages:
                                 continue
                             msg_you = msg_oth = char_you = char_oth = 0
