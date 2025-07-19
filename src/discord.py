@@ -1,4 +1,3 @@
-import re
 from src.socialnetwork import *
 
 class Discord(SocialNetwork):

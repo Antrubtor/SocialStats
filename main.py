@@ -1,15 +1,14 @@
 import os
-from pathlib import Path
 from src.utils import *
 from src.discord import Discord
 from src.instagram import Instagram
 from src.snapchat import SnapChat
 from src.whatsapp import WhatsApp
 
-txt_networks = [("Discord", "zip", Discord),
-                ("Instagram", "zip", Instagram),
-                ("SnapChat", "zip", SnapChat),
-                ("WhatsApp", "zip", WhatsApp)] # name, extension of package's file, class
+txt_networks = [("Discord", Discord),
+                ("Instagram", Instagram),
+                ("SnapChat", SnapChat),
+                ("WhatsApp", WhatsApp)] # name, class
 
 def create_directory(nested_directory):
     try:
@@ -26,11 +25,20 @@ def create_export_directories():
     for s in txt_networks:
         create_directory(f"social_exports/{s[0]}")
 
+def set_path_whatsapp(folder, cls):
+    paths = []
+    for path in folder.glob(f"*.zip"):
+        paths.append(path)
+    return cls(paths)
+
 def set_all_path():
     s_n = []
-    for name, ext, cls in txt_networks:
+    for name, cls in txt_networks:
         folder = Path(f"social_exports/{name}")
-        for path in folder.glob(f"*.{ext}"):
+        if name == "WhatsApp":
+            s_n.append(set_path_whatsapp(folder, WhatsApp))
+            break
+        for path in folder.glob(f"*.zip"):
             s_n.append(cls(path))
     return s_n
 
