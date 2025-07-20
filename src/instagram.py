@@ -4,9 +4,10 @@ class Instagram(SocialNetwork):
     def start_process(self):
         actions = [
             Action("I want to do statistics on messages", self.messages_process),
+            Action("I want to export conversations to a unified JSON format (work in progress)", self.export_process),
             Action("I want to tidy up the media", self.medias_process)
         ]
-        selected = ask("What do you want to do with your Snapchat package?", actions)
+        selected = ask(f"What do you want to do with your {self.__class__.__name__} package?", actions)
         selected.execute()
 
     def messages_stats(self):
@@ -85,18 +86,18 @@ class Instagram(SocialNetwork):
 
                                 # Message delay
                                 if last_sender is not None and last_sender != is_you and last_timestamp is not None:
-                                    delay = abs(timestamp_ms - last_timestamp)
+                                    delay = abs(dt - last_timestamp)
                                     if is_you:
                                         delays_you.append(delay)
                                     else:
                                         delays_oth.append(delay)
                                 last_sender = is_you
-                                last_timestamp = timestamp_ms
+                                last_timestamp = dt
 
                                 total_chr += nb_chars
                                 total_msg += 1
-                            avg_delay_you = sum(delays_you) // len(delays_you) if delays_you else 0
-                            avg_delay_oth = sum(delays_oth) // len(delays_oth) if delays_oth else 0
+                            avg_delay_you = sum(delays_you, timedelta()) / len(delays_you) if delays_you else timedelta(0)
+                            avg_delay_oth = sum(delays_oth, timedelta()) / len(delays_oth) if delays_oth else timedelta(0)
 
                             per_contact_stats["Contact"].append(contact)
 
@@ -120,6 +121,10 @@ class Instagram(SocialNetwork):
         except Exception as e:
             print(e)
 
+    def export_process(self):
+        print("Wait for next updates to get this feature")
+        pass
+
     def medias_process(self):
-        print("Media processing")
+        print("Wait for next updates to get this feature")
         pass

@@ -31,6 +31,10 @@ def set_path_whatsapp(folder, cls):
         paths.append(path)
     return cls(paths)
 
+def run_all_stats(s_n):
+    for n in s_n:
+        n.start_process()
+
 def set_all_path():
     s_n = []
     for name, cls in txt_networks:
@@ -40,9 +44,14 @@ def set_all_path():
             break
         for path in folder.glob(f"*.zip"):
             s_n.append(cls(path))
+    if s_n:
+        s_n.append("All")
     return s_n
 
 create_export_directories()
 social_networks = set_all_path()
 answer = ask("Which social network do you want to analyse?", social_networks)
-answer.start_process()
+if answer == "All":
+    run_all_stats(social_networks)
+else:
+    answer.start_process()

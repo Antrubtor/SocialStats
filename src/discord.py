@@ -3,9 +3,10 @@ from src.socialnetwork import *
 class Discord(SocialNetwork):
     def start_process(self):
         actions = [
-            Action("I want to do statistics on messages", self.messages_process)
+            Action("I want to do statistics on messages", self.messages_process),
+            Action("I want to export conversations to a unified JSON format (work in progress)", self.export_process)
         ]
-        selected = ask("What do you want to do with your Snapchat package?", actions)
+        selected = ask(f"What do you want to do with your {self.__class__.__name__} package?", actions)
         selected.execute()
 
     def __snowflake_to_date(self, id):
@@ -134,3 +135,7 @@ class Discord(SocialNetwork):
                 return per_contact_stats, messages_per_day, hour_distribution, f"{self.__class__.__name__}.xlsx"
         except Exception as e:
             print(e)
+
+    def export_process(self):
+        print("Wait for next updates to get this feature")
+        pass
