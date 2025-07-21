@@ -121,7 +121,6 @@ class Instagram(SocialNetwork):
                         per_contact_stats["Contact answer delay"].append(avg_delay_oth)
 
                 print(f"\nLoaded {total_msg} messages in total with {total_chr} characters")
-                print(per_contact_stats)
                 return per_contact_stats, messages_per_day, hour_distribution, f"{self.__class__.__name__}_{pseudo}"
         except Exception as e:
             print(e)

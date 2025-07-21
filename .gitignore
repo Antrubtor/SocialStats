@@ -210,7 +210,6 @@ __marimo__/
 .idea/
 
 social_exports/
-Discord.xlsx
-Instagram.xlsx
-SnapChat.xlsx
-WhatsApp.xlsx
+Excels/
+*.xlsx
+*.csv

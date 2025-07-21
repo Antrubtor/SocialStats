@@ -106,7 +106,7 @@ class Discord(SocialNetwork):
                         contact_id = contact_id.group(1)
                     if contact_id not in channels_name_id:
                         continue
-                    contact = channels_name_id[contact_id]
+                    contact = channels_name_id[contact_id].replace("#0", "")
                     with package.open(filename, mode="r") as msg:
                         messages = json.load(msg)
                         if min_messages > 0 and len(messages) < min_messages:

@@ -111,9 +111,9 @@ class SnapChat(SocialNetwork):
                         per_contact_stats["Characters sent by you"].append(char_you)
                         per_contact_stats["Characters sent by your contact"].append(char_oth)
 
-                        per_contact_stats["Voice message time"].append(voice_you + voice_oth)
-                        per_contact_stats["Your voice message time"].append(voice_you)
-                        per_contact_stats["Contact voice message time"].append(voice_oth)
+                        per_contact_stats["Voice message time"].append(timedelta(seconds=voice_you + voice_oth))
+                        per_contact_stats["Your voice message time"].append(timedelta(seconds=voice_you))
+                        per_contact_stats["Contact voice message time"].append(timedelta(seconds=voice_oth))
 
                         per_contact_stats["Your answer delay"].append(avg_delay_you)
                         per_contact_stats["Contact answer delay"].append(avg_delay_oth)
