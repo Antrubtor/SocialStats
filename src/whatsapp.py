@@ -19,6 +19,49 @@ class WhatsApp(SocialNetwork):
         selected = ask(f"What do you want to do with your {self.__class__.__name__} package?", actions)
         selected.execute()
 
+
+    def __parse_whatsapp_chat(self, text):
+        msg_pattern = re.compile(r"^(\d{1,2}/\d{1,2}/\d{2,4}), (\d{2}:\d{2}) - ")
+        messages = []
+        current_msg = None
+
+        for line in text.splitlines():
+            if msg_pattern.match(line):
+                match = msg_pattern.match(line)
+                date_str = f"{match.group(1)}, {match.group(2)}" # parse date
+
+                for fmt in ["%d/%m/%Y, %H:%M", "%d/%m/%y, %H:%M"]:
+                    try:
+                        timestamp = datetime.strptime(date_str, fmt)
+                        break
+                    except ValueError:
+                        timestamp = None
+                if not timestamp:
+                    continue  # corrupted
+
+                content = line[match.end():]
+
+                if ": " in content:
+                    author, message = content.split(": ", 1)
+                else:
+                    continue  # system message
+
+                if current_msg:
+                    messages.append(current_msg)
+
+                current_msg = {
+                    "datetime": timestamp,
+                    "author": author,
+                    "message": message
+                }
+            else: # Multiline messages
+                if current_msg:
+                    current_msg["message"] += "\n" + line
+        if current_msg:
+            messages.append(current_msg)
+        return messages
+
+
     def messages_stats(self):
         try:
             min_messages = ask_number("Minimum number of messages per contact (0 for no limit set)?")
@@ -105,50 +148,9 @@ class WhatsApp(SocialNetwork):
                                 per_contact_stats["Contact answer delay"].append(avg_delay_oth)
 
             print(f"\nLoaded {total_msg} messages in total with {total_chr} characters")
-            return per_contact_stats, messages_per_day, hour_distribution, f"{self.__class__.__name__}.xlsx"
+            return per_contact_stats, messages_per_day, hour_distribution, f"{self.__class__.__name__}_{pseudo}"
         except Exception as e:
             print(e)
-
-    def __parse_whatsapp_chat(self, text):
-        msg_pattern = re.compile(r"^(\d{1,2}/\d{1,2}/\d{2,4}), (\d{2}:\d{2}) - ")
-        messages = []
-        current_msg = None
-
-        for line in text.splitlines():
-            if msg_pattern.match(line):
-                match = msg_pattern.match(line)
-                date_str = f"{match.group(1)}, {match.group(2)}" # parse date
-
-                for fmt in ["%d/%m/%Y, %H:%M", "%d/%m/%y, %H:%M"]:
-                    try:
-                        timestamp = datetime.strptime(date_str, fmt)
-                        break
-                    except ValueError:
-                        timestamp = None
-                if not timestamp:
-                    continue  # corrupted
-
-                content = line[match.end():]
-
-                if ": " in content:
-                    author, message = content.split(": ", 1)
-                else:
-                    continue  # system message
-
-                if current_msg:
-                    messages.append(current_msg)
-
-                current_msg = {
-                    "datetime": timestamp,
-                    "author": author,
-                    "message": message
-                }
-            else: # Multiline messages
-                if current_msg:
-                    current_msg["message"] += "\n" + line
-        if current_msg:
-            messages.append(current_msg)
-        return messages
 
     def export_process(self):
         print("Wait for next updates to get this feature")
