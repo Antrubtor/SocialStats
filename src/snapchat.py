@@ -26,6 +26,7 @@ class SnapChat(SocialNetwork):
                             media_ids_files[filename.split("_")[2].split(".")[0]] = filename
                         except IndexError:
                             continue
+                media_ids_files = {}    # TODO: remove
 
                 min_messages = ask_number("Minimum number of messages per contact (0 for no limit set)?")
 
@@ -110,15 +111,15 @@ class SnapChat(SocialNetwork):
                         per_contact_stats["Characters sent by you"].append(char_you)
                         per_contact_stats["Characters sent by your contact"].append(char_oth)
 
-                        per_contact_stats["Vocal message time"].append(voice_you)
-                        per_contact_stats["Your vocal message time"].append(voice_you)
-                        per_contact_stats["Contact vocal message time"].append(voice_oth)
+                        per_contact_stats["Voice message time"].append(voice_you + voice_oth)
+                        per_contact_stats["Your voice message time"].append(voice_you)
+                        per_contact_stats["Contact voice message time"].append(voice_oth)
 
                         per_contact_stats["Your answer delay"].append(avg_delay_you)
                         per_contact_stats["Contact answer delay"].append(avg_delay_oth)
 
                     print(f"\nLoaded {total_msg} messages in total with {total_chr} characters")
-                    return per_contact_stats, messages_per_day, hour_distribution, f"{self.__class__.__name__}.xlsx"
+                    return per_contact_stats, messages_per_day, hour_distribution, f"{self.__class__.__name__}_{pseudo}"
         except Exception as e:
             print(e)
 
