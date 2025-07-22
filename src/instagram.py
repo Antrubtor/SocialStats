@@ -10,7 +10,7 @@ class Instagram(SocialNetwork):
         selected = ask(f"What do you want to do with your {self.__class__.__name__} package?", actions)
         selected.execute()
 
-    def messages_stats(self):
+    def messages_stats(self, min_messages):
         try:
             with zipfile.ZipFile(self.path, mode="r") as package:
                 with package.open("personal_information/personal_information/personal_information.json", mode="r") as account:
@@ -20,9 +20,7 @@ class Instagram(SocialNetwork):
                 with package.open("security_and_login_information/login_and_profile_creation/signup_details.json", mode="r") as account:
                     sections = json.load(account)
                     creation_date = datetime.fromtimestamp(sections["account_history_registration_info"][0]["string_map_data"]["Time"]["timestamp"])
-                print(f"Your account named {pseudo}, created on {creation_date}, was found")
-
-                min_messages = ask_number("Minimum number of messages per contact (0 for no limit set)?")
+                print(f"Your {self.__class__.__name__} account named {pseudo}, created on {creation_date}, was found")
 
                 messages_per_day = {}  # date : { name : (nb_you, nb_oth), name : (nb_you, nb_oth) }
                 hour_distribution = [0] * 24
@@ -81,8 +79,8 @@ class Instagram(SocialNetwork):
                             # Voice message time
                             if "audio_files" in message:
                                 for audio_file in message["audio_files"]:
-                                    # duration = get_mp4_duration(self.path, audio_file["uri"])
-                                    duration = 0    # TODO: remove
+                                    duration = get_mp4_duration(self.path, audio_file["uri"])
+                                    # duration = 0    # TODO: remove
                                     if is_you:
                                         voice_you += duration
                                     else:

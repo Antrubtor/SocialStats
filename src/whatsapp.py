@@ -62,9 +62,9 @@ class WhatsApp(SocialNetwork):
         return messages
 
 
-    def messages_stats(self):
+    def messages_stats(self, min_messages):
         try:
-            min_messages = ask_number("Minimum number of messages per contact (0 for no limit set)?")
+            # min_messages = ask_number("Minimum number of messages per contact (0 for no limit set)?")
             messages_per_day = {}  # date : { name : (nb_you, nb_oth), name : (nb_you, nb_oth) }
             hour_distribution = [0] * 24
             per_contact_stats = defaultdict(list)

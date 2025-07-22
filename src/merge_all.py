@@ -4,6 +4,7 @@ from src.socialnetwork import *
 from src.discord import Discord
 
 class Merge:
+    all_stats = []
     def __init__(self, packages):
         self.packages = packages
 
@@ -16,11 +17,17 @@ class Merge:
             ask("Have you completed the merge_map.csv file that allows you to merge people who have different usernames between social networks?", ["Yes", "No"])
         else:
             print("If you haven't done so, you can complete the merge_map.csv file, which allows you to merge people who have different usernames between social networks.")
-        all_stats = []
-        only_your_msg_chat = 0
+        min_msg_all = []
         for package in self.packages:
             if isinstance(package, SocialNetwork):
-                all_stats.append(package.messages_stats())
+                min_msg_all.append(ask_number(f"Minimum number of messages per contact for \"{package}\" (0 for no limit set)?"))
+        all_stats = []
+        only_your_msg_chat = 0
+        pos = 0
+        for package in self.packages:
+            if isinstance(package, SocialNetwork):
+                all_stats.append(package.messages_stats(min_msg_all[pos]))
+                pos += 1
             if isinstance(package, Discord):
                 only_your_msg_chat += 1
         for stats in all_stats:
@@ -51,10 +58,9 @@ class Merge:
 
     def __keep_only_me(self, all_stats, mapping):
         for stats in all_stats:
-            if "Messages" in stats[0]:
-                del stats[0]["Messages"]
-            if "Messages sent by you" in stats[0]:
-                stats[0]["Messages"] = stats[0].pop("Messages sent by you")
+            if "Messages" in stats[0] and "Messages sent by you" in stats[0]:
+                for i in range(len(stats[0]["Messages sent by you"])):
+                    stats[0]["Messages"][i] = stats[0]["Messages sent by you"][i]
 
             for date, user_msg in stats[1].items():
                 for user, value in user_msg.items():
@@ -149,7 +155,6 @@ class Merge:
                 for user, value in user_msg.items():
                     if user in name:
                         if name[0] in new_user_association: # we keep the first pseudo of the list
-                            # print(new_user_association[name[0]])
                             nb_you, nb_oth = new_user_association[name[0]]
                             new_user_association[name[0]] = (value[0] + nb_you, value[1] + nb_oth)
                         else:

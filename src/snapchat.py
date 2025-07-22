@@ -10,14 +10,14 @@ class SnapChat(SocialNetwork):
         selected = ask(f"What do you want to do with your {self.__class__.__name__} package?", actions)
         selected.execute()
 
-    def messages_stats(self):
+    def messages_stats(self, min_messages):
         try:
             with zipfile.ZipFile(self.path, mode="r") as package:
                 with package.open("json/account.json", mode="r") as account:
                     sections = json.load(account)
                     pseudo = sections["Basic Information"]["Username"]
                     creation_date = sections["Basic Information"]["Creation Date"]
-                    print(f"Your account named {pseudo}, created on {creation_date}, was found")
+                    print(f"Your {self.__class__.__name__} account named {pseudo}, created on {creation_date}, was found")
 
                 media_ids_files = {}
                 for filename in package.namelist():
@@ -26,9 +26,7 @@ class SnapChat(SocialNetwork):
                             media_ids_files[filename.split("_")[2].split(".")[0]] = filename
                         except IndexError:
                             continue
-                media_ids_files = {}    # TODO: remove
-
-                min_messages = ask_number("Minimum number of messages per contact (0 for no limit set)?")
+                # media_ids_files = {}    # TODO: remove
 
                 with package.open("json/chat_history.json", mode="r") as msg:
                     sections = json.load(msg)

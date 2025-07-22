@@ -11,9 +11,10 @@ class SocialNetwork:
     def start_process(self):
         return NotImplemented
 
-    def messages_stats(self):
+    def messages_stats(self, min_messages):
         return NotImplemented
 
     def messages_process(self):
-        per_contact_stats, messages_per_day, hour_distribution, excel_name = self.messages_stats()
+        min_messages = ask_number("Minimum number of messages per contact (0 for no limit set)?")
+        per_contact_stats, messages_per_day, hour_distribution, excel_name = self.messages_stats(min_messages)
         generate_excel(per_contact_stats, messages_per_day, hour_distribution, excel_name)

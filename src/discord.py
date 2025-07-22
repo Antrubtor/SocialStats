@@ -59,7 +59,7 @@ class Discord(SocialNetwork):
         print(f"Your total call time is {total_voice_times} and your longest call was {max_time}.")
         return call_per_user
 
-    def messages_stats(self):
+    def messages_stats(self, min_messages):
         try:
             with zipfile.ZipFile(self.path, mode="r") as package:
                 account_files = [file for file in package.infolist()
@@ -72,7 +72,7 @@ class Discord(SocialNetwork):
                             pseudo = sections["username"]
                             date = self.__snowflake_to_date(sections["id"])
                             creation_date = f"{date.day}/{date.month}/{date.year} at {date.hour}:{date.minute}"
-                            print(f"Your account named {pseudo}, created on {creation_date}, was found")
+                            print(f"Your {self.__class__.__name__} account named {pseudo}, created on {creation_date}, was found")
                             break
                     except:
                         pass
@@ -89,7 +89,6 @@ class Discord(SocialNetwork):
                         msg_file_name = msg_file.filename.split("/")[0]
                     except:
                         pass
-                min_messages = ask_number("Minimum number of messages per contact (0 for no limit set)?")
 
                 messages_per_day = {}  # date : { name : (nb_you, nb_oth), name : (nb_you, nb_oth) }
                 hour_distribution = [0] * 24
@@ -145,8 +144,8 @@ class Discord(SocialNetwork):
                         per_contact_stats["Characters sent by you"].append(char_you)
                         per_contact_stats["Characters sent by your contact"].append(char_oth)
                 print(f"\nLoaded {total_msg} messages in total with {total_chr} characters")
-                call_per_user = {}
-                # call_per_user = self.__voice_times_by_user(package, channels_name_id)
+                # call_per_user = {}
+                call_per_user = self.__voice_times_by_user(package, channels_name_id) # TODO: remove
                 for user in per_contact_stats["Contact"]:
                     if user not in call_per_user:
                         per_contact_stats["Call time"].append("0h0m")
