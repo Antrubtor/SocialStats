@@ -127,7 +127,7 @@ def generate_excel(per_contact_stats, messages_per_day, hour_distribution, excel
 
     # ===== Messages per day =====
     ws2 = wb.create_sheet("Messages per day")
-    all_dates = sorted(set(datetime.strptime(date, "%m/%d/%Y")
+    all_dates = sorted(set(datetime.strptime(date, "%d/%m/%Y")
                            for date in messages_per_day.keys()))
     contacts = sorted({c for daily in messages_per_day.values() for c in daily})
     ws2.cell(row=1, column=1, value="Date")
@@ -136,7 +136,7 @@ def generate_excel(per_contact_stats, messages_per_day, hour_distribution, excel
     ws2.cell(row=1, column=len(contacts) + 2, value="TOTAL")
 
     for row, dt in enumerate(all_dates, 2):
-        date_str = dt.strftime("%m/%d/%Y")
+        date_str = dt.strftime("%d/%m/%Y")
         ws2.cell(row=row, column=1, value=date_str)
         total = 0
         for col, contact in enumerate(contacts, 2):
@@ -151,8 +151,8 @@ def generate_excel(per_contact_stats, messages_per_day, hour_distribution, excel
     for dt in all_dates:
         week = dt.strftime("%Y-W%U")
         weekly_data[week] = weekly_data.get(week, 0) + sum(
-            messages_per_day.get(dt.strftime("%m/%d/%Y"), {}).get(c, (0, 0))[0] +
-            messages_per_day.get(dt.strftime("%m/%d/%Y"), {}).get(c, (0, 0))[1]
+            messages_per_day.get(dt.strftime("%d/%m/%Y"), {}).get(c, (0, 0))[0] +
+            messages_per_day.get(dt.strftime("%d/%m/%Y"), {}).get(c, (0, 0))[1]
             for c in contacts
         )
     ws_week.cell(row=1, column=1, value="Week")
@@ -167,8 +167,8 @@ def generate_excel(per_contact_stats, messages_per_day, hour_distribution, excel
     for dt in all_dates:
         month = dt.strftime("%Y-%m")
         monthly_data[month] = monthly_data.get(month, 0) + sum(
-            messages_per_day.get(dt.strftime("%m/%d/%Y"), {}).get(c, (0, 0))[0] +
-            messages_per_day.get(dt.strftime("%m/%d/%Y"), {}).get(c, (0, 0))[1]
+            messages_per_day.get(dt.strftime("%d/%m/%Y"), {}).get(c, (0, 0))[0] +
+            messages_per_day.get(dt.strftime("%d/%m/%Y"), {}).get(c, (0, 0))[1]
             for c in contacts
         )
     ws_month.cell(row=1, column=1, value="Month")
@@ -183,8 +183,8 @@ def generate_excel(per_contact_stats, messages_per_day, hour_distribution, excel
     for dt in all_dates:
         year = dt.strftime("%Y")
         yearly_data[year] = yearly_data.get(year, 0) + sum(
-            messages_per_day.get(dt.strftime("%m/%d/%Y"), {}).get(c, (0, 0))[0] +
-            messages_per_day.get(dt.strftime("%m/%d/%Y"), {}).get(c, (0, 0))[1]
+            messages_per_day.get(dt.strftime("%d/%m/%Y"), {}).get(c, (0, 0))[0] +
+            messages_per_day.get(dt.strftime("%d/%m/%Y"), {}).get(c, (0, 0))[1]
             for c in contacts
         )
     ws_year.cell(row=1, column=1, value="Year")
@@ -202,7 +202,7 @@ def generate_excel(per_contact_stats, messages_per_day, hour_distribution, excel
 
     cumulative = [0] * len(contacts)
     for row, dt in enumerate(all_dates, 2):
-        date_str = dt.strftime("%m/%d/%Y")
+        date_str = dt.strftime("%d/%m/%Y")
         ws3.cell(row=row, column=1, value=date_str)
         total = 0
         for col, contact in enumerate(contacts, 2):

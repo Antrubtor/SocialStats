@@ -94,7 +94,7 @@ class WhatsApp(SocialNetwork):
 
                                     # Hour distribution
                                     dt = message["datetime"]
-                                    date_str = dt.strftime("%m/%d/%Y")
+                                    date_str = dt.strftime("%d/%m/%Y")
                                     hour = dt.hour
                                     if is_you:
                                         hour_distribution[hour] += 1

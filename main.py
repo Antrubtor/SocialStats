@@ -45,7 +45,7 @@ if __name__ == "__main__":
     create_export_directories()
     social_networks = set_all_path()
     while not social_networks:
-        input("No packages were found. Please add your zip files to social_export/SocialNetwork. Press Enter when finished.")
+        input("No packages were found. Please add your zip files to \"social_export/*\". Press Enter when finished.")
         social_networks = set_all_path()
     answer = ask("Which social network do you want to analyse?", social_networks)
     try:

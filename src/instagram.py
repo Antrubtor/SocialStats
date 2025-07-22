@@ -50,7 +50,7 @@ class Instagram(SocialNetwork):
                             # Hour distribution
                             timestamp_ms = int(message["timestamp_ms"]) // 1000
                             dt = datetime.fromtimestamp(timestamp_ms)
-                            date_str = dt.strftime("%m/%d/%Y")
+                            date_str = dt.strftime("%d/%m/%Y")
                             hour = dt.hour
                             if is_you:
                                 hour_distribution[hour] += 1

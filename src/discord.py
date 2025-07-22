@@ -114,7 +114,7 @@ class Discord(SocialNetwork):
                         for message in tqdm(messages, leave=False):
                             # Hour distribution
                             dt = self.__snowflake_to_date(message["ID"])
-                            date_str = dt.strftime("%m/%d/%Y")
+                            date_str = dt.strftime("%d/%m/%Y")
                             hour = dt.hour
                             hour_distribution[hour] += 1
                             if date_str not in messages_per_day:
@@ -144,8 +144,8 @@ class Discord(SocialNetwork):
                         per_contact_stats["Characters sent by you"].append(char_you)
                         per_contact_stats["Characters sent by your contact"].append(char_oth)
                 print(f"\nLoaded {total_msg} messages in total with {total_chr} characters")
-                # call_per_user = {}
-                call_per_user = self.__voice_times_by_user(package, channels_name_id) # TODO: remove
+                # call_per_user = {}    # TODO: remove
+                call_per_user = self.__voice_times_by_user(package, channels_name_id)
                 for user in per_contact_stats["Contact"]:
                     if user not in call_per_user:
                         per_contact_stats["Call time"].append("0h0m")
