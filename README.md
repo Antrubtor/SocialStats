@@ -3,8 +3,6 @@
 **SocialStats** is a tool that analyzes your personal data from various social networks to provide **clear and visual statistics** about your online interactions.
 It aggregates, merges, and visualizes advanced stats (response delay, activity over time, call durations, etc.) into **Excel graphs** that are easy to read and understand.
 
-Created by [Antrubtor](https://github.com/Antrubtor)
-
 ---
 
 ## 🧩 Features
@@ -105,9 +103,16 @@ Automatically export all **images** and **videos** from supported platforms into
 
 ## 📷 Example outputs
 
-| Cumulative Messages per Day          | Answer Delay Comparison              | Message Activity by Hour             | Messages per Contact                 |
-| ------------------------------------ | ------------------------------------ | ------------------------------------ | ------------------------------------ |
-| ![Example 1](.ressources/stats1.png) | ![Example 2](.ressources/stats2.png) | ![Example 3](.ressources/stats3.png) | ![Example 4](.ressources/stats4.png) |
+<table>
+  <tr>
+    <td><img src=".ressources/cumul_per_day.png" width="400"/></td>
+    <td><img src=".ressources/answer_delay.png" width="400"/></td>
+  </tr>
+  <tr>
+    <td><img src=".ressources/msg_per_hour.png" width="400"/></td>
+    <td><img src=".ressources/proportion_contact.png" width="400"/></td>
+  </tr>
+</table>
 
 ---
 
