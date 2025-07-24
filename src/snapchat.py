@@ -124,6 +124,29 @@ class SnapChat(SocialNetwork):
     def export_process(self):
         print("Wait for next updates to get this feature")
         pass
+
     def medias_process(self):
-        print("Wait for next updates to get this feature")
-        pass
+        try:
+            with zipfile.ZipFile(self.path, mode="r") as package:
+                media_ids_files = {}
+                for filename in package.namelist():
+                    if filename.startswith("chat_media/") and "_" in filename:
+                        try:
+                            media_ids_files[filename.split("_")[2].split(".")[0]] = filename
+                        except IndexError:
+                            continue
+                # media_ids_files = {}    # TODO: remove
+
+                with package.open("json/chat_history.json", mode="r") as msg:
+                    sections = json.load(msg)
+                    for contact, messages in tqdm(sections.items()):
+                        for message in tqdm(messages, leave=False):
+
+                            # Voice message time
+                            media_id = message.get("Media IDs")
+                            if message["Media Type"] == "???" and media_id: # TODO: check type of video / photos
+                                continue
+                    print(f"\nAll media exported")
+                    return # TODO: add loop for snap only
+        except Exception as e:
+            print(e)
