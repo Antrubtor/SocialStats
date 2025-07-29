@@ -136,12 +136,11 @@ class SnapChat(SocialNetwork):
                         except IndexError:
                             continue
                 # media_ids_files = {}    # TODO: remove
-
+                nb = 0
                 with package.open("json/chat_history.json", mode="r") as msg:
                     sections = json.load(msg)
                     export_folder = "Media"
                     os.makedirs(export_folder, exist_ok=True)
-                    nb = 0
                     for contact, messages in tqdm(sections.items()):
                         for message in tqdm(messages, leave=False):
                             media_id = message.get("Media IDs")
@@ -159,6 +158,5 @@ class SnapChat(SocialNetwork):
                                     data = source_file.read()
                                     target_file.write(data)
                     print(f"\n{nb} media exported")
-            # TODO: add loop for snap only
         except Exception as e:
             print(e)
