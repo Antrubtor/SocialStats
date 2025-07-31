@@ -139,7 +139,7 @@ class SnapChat(SocialNetwork):
                 nb = 0
                 with package.open("json/chat_history.json", mode="r") as msg:
                     sections = json.load(msg)
-                    export_folder = "Media"
+                    export_folder = f"Media/{self.__class__.__name__}"
                     os.makedirs(export_folder, exist_ok=True)
                     for contact, messages in tqdm(sections.items()):
                         for message in tqdm(messages, leave=False):
