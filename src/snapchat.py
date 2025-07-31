@@ -5,7 +5,7 @@ class SnapChat(SocialNetwork):
         actions = [
             Action("I want to do statistics on messages", self.messages_process),
             Action("I want to export conversations to a unified JSON format (work in progress)", self.export_process),
-            Action("I want to tidy up the media (work in progress)", self.medias_process)
+            Action("I want to tidy up the media", self.medias_process)
         ]
         selected = ask(f"What do you want to do with your {self.__class__.__name__} package?", actions)
         selected.execute()
@@ -124,6 +124,39 @@ class SnapChat(SocialNetwork):
     def export_process(self):
         print("Wait for next updates to get this feature")
         pass
+
     def medias_process(self):
-        print("Wait for next updates to get this feature")
-        pass
+        try:
+            with zipfile.ZipFile(self.path, mode="r") as package:
+                media_ids_files = {}
+                for filename in package.namelist():
+                    if filename.startswith("chat_media/") and "_" in filename:
+                        try:
+                            media_ids_files[filename.split("_")[2].split(".")[0]] = filename
+                        except IndexError:
+                            continue
+                # media_ids_files = {}    # TODO: remove
+                nb = 0
+                with package.open("json/chat_history.json", mode="r") as msg:
+                    sections = json.load(msg)
+                    export_folder = f"Media/{self.__class__.__name__}"
+                    os.makedirs(export_folder, exist_ok=True)
+                    for contact, messages in tqdm(sections.items()):
+                        for message in tqdm(messages, leave=False):
+                            media_id = message.get("Media IDs")
+                            if message["Media Type"] == "MEDIA" and media_id and media_id in media_ids_files:
+                                nb += 1
+                                path = media_ids_files[media_id]
+                                ext = os.path.splitext(path)[1]
+                                if ext == ".unknown":
+                                    ext = ".gif"
+                                timestamp_ms = int(message["Created(microseconds)"]) // 1000
+                                dt = datetime.fromtimestamp(timestamp_ms)
+                                new_filename = dt.strftime(f"%d-%m-%y_%Hh_%Mm_%Ss") + f"_{dt.microsecond // 100000}-{contact}{ext}"
+                                out_path = os.path.join(export_folder, new_filename)
+                                with package.open(path) as source_file, open(out_path, "wb") as target_file:
+                                    data = source_file.read()
+                                    target_file.write(data)
+                    print(f"\n{nb} media exported")
+        except Exception as e:
+            print(e)
