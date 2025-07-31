@@ -5,7 +5,7 @@ class SnapChat(SocialNetwork):
         actions = [
             Action("I want to do statistics on messages", self.messages_process),
             Action("I want to export conversations to a unified JSON format (work in progress)", self.export_process),
-            Action("I want to tidy up the media (work in progress)", self.medias_process)
+            Action("I want to tidy up the media", self.medias_process)
         ]
         selected = ask(f"What do you want to do with your {self.__class__.__name__} package?", actions)
         selected.execute()
