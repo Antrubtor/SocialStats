@@ -127,9 +127,20 @@ class Instagram(SocialNetwork):
         print("Wait for next updates to get this feature")
         pass
 
+    def __move_file(self, path, timestamp_ms, contact, package):
+        ext = os.path.splitext(path)[1]
+        dt = datetime.fromtimestamp(timestamp_ms)
+        new_filename = dt.strftime(f"%d-%m-%y_%Hh_%Mm_%Ss") + f"_{dt.microsecond // 100000}-{contact}{ext}"
+        export_folder = f"Media/{self.__class__.__name__}/"
+        out_path = os.path.join(export_folder, new_filename)
+        with package.open(path) as source_file, open(out_path, "wb") as target_file:
+            data = source_file.read()
+            target_file.write(data)
+
     def medias_process(self):
         try:
             with zipfile.ZipFile(self.path, mode="r") as package:
+                nb = 0
                 msg_files = [file for file in package.infolist()
                              if file.filename.startswith("your_instagram_activity/messages/inbox")
                              and file.filename.endswith(".json")
@@ -140,18 +151,16 @@ class Instagram(SocialNetwork):
                         chat = json.load(msg)
                         messages = chat["messages"]
                         for message in tqdm(messages, leave=False):
+                            timestamp_ms = int(message["timestamp_ms"]) // 1000
 
-                            # Voice message time
-                            if "audio_files" in message:
-                                for audio_file in message["audio_files"]:
-                                    duration = get_mp4_duration(self.path, audio_file["uri"])
-                                    # duration = 0    # TODO: remove
-                                    if is_you:
-                                        voice_you += duration
-                                    else:
-                                        voice_oth += duration
-
-                print(f"\nLoaded {total_msg} messages in total with {total_chr} characters")
-                return per_contact_stats, messages_per_day, hour_distribution, f"{self.__class__.__name__}_{pseudo}"
+                            if "videos" in message:
+                                for vid in message["videos"]:
+                                    self.__move_file(vid["uri"], timestamp_ms, contact, package)
+                                    nb += 1
+                            if "photos" in message:
+                                for pic in message["photos"]:
+                                    self.__move_file(pic["uri"], timestamp_ms, contact, package)
+                                    nb += 1
+                print(f"\n{nb} media exported")
         except Exception as e:
             print(e)
