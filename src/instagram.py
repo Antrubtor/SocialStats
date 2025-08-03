@@ -128,5 +128,30 @@ class Instagram(SocialNetwork):
         pass
 
     def medias_process(self):
-        print("Wait for next updates to get this feature")
-        pass
+        try:
+            with zipfile.ZipFile(self.path, mode="r") as package:
+                msg_files = [file for file in package.infolist()
+                             if file.filename.startswith("your_instagram_activity/messages/inbox")
+                             and file.filename.endswith(".json")
+                             and not file.is_dir()]
+                for file in tqdm(msg_files):
+                    with package.open(file, "r") as msg:
+                        contact = file.filename.replace("your_instagram_activity/messages/inbox/", "").rsplit('/', 1)[0].rsplit('_', 1)[0]
+                        chat = json.load(msg)
+                        messages = chat["messages"]
+                        for message in tqdm(messages, leave=False):
+
+                            # Voice message time
+                            if "audio_files" in message:
+                                for audio_file in message["audio_files"]:
+                                    duration = get_mp4_duration(self.path, audio_file["uri"])
+                                    # duration = 0    # TODO: remove
+                                    if is_you:
+                                        voice_you += duration
+                                    else:
+                                        voice_oth += duration
+
+                print(f"\nLoaded {total_msg} messages in total with {total_chr} characters")
+                return per_contact_stats, messages_per_day, hour_distribution, f"{self.__class__.__name__}_{pseudo}"
+        except Exception as e:
+            print(e)
