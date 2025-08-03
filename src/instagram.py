@@ -127,11 +127,10 @@ class Instagram(SocialNetwork):
         print("Wait for next updates to get this feature")
         pass
 
-    def __move_file(self, path, timestamp_ms, contact, package):
+    def __move_file(self, path, timestamp_ms, contact, export_folder, package):
         ext = os.path.splitext(path)[1]
         dt = datetime.fromtimestamp(timestamp_ms)
-        new_filename = dt.strftime(f"%d-%m-%y_%Hh_%Mm_%Ss") + f"_{dt.microsecond // 100000}-{contact}{ext}"
-        export_folder = f"Media/{self.__class__.__name__}/"
+        new_filename = dt.strftime(f"%y-%m-%d_%Hh_%Mm_%Ss") + f"_{dt.microsecond // 100000}-{contact}{ext}"
         out_path = os.path.join(export_folder, new_filename)
         with package.open(path) as source_file, open(out_path, "wb") as target_file:
             data = source_file.read()
@@ -141,6 +140,8 @@ class Instagram(SocialNetwork):
         try:
             with zipfile.ZipFile(self.path, mode="r") as package:
                 nb = 0
+                export_folder = f"Media/{self.__class__.__name__}/"
+                os.makedirs(export_folder, exist_ok=True)
                 msg_files = [file for file in package.infolist()
                              if file.filename.startswith("your_instagram_activity/messages/inbox")
                              and file.filename.endswith(".json")
@@ -155,11 +156,11 @@ class Instagram(SocialNetwork):
 
                             if "videos" in message:
                                 for vid in message["videos"]:
-                                    self.__move_file(vid["uri"], timestamp_ms, contact, package)
+                                    self.__move_file(vid["uri"], timestamp_ms, contact, export_folder, package)
                                     nb += 1
                             if "photos" in message:
                                 for pic in message["photos"]:
-                                    self.__move_file(pic["uri"], timestamp_ms, contact, package)
+                                    self.__move_file(pic["uri"], timestamp_ms, contact, export_folder, package)
                                     nb += 1
                 print(f"\n{nb} media exported")
         except Exception as e:
