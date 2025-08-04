@@ -126,7 +126,7 @@ class SnapChat(SocialNetwork):
         pass
 
     def medias_process(self):
-        try:
+        # try:
             with zipfile.ZipFile(self.path, mode="r") as package:
                 media_ids_files = {}
                 for filename in package.namelist():
@@ -139,11 +139,13 @@ class SnapChat(SocialNetwork):
                 nb = 0
                 with package.open("json/chat_history.json", mode="r") as msg:
                     sections = json.load(msg)
-                    export_folder = f"Media/{self.__class__.__name__}"
+                    export_folder = f"Media/{self.__class__.__name__}/"
                     os.makedirs(export_folder, exist_ok=True)
                     for contact, messages in tqdm(sections.items()):
                         for message in tqdm(messages, leave=False):
                             media_id = message.get("Media IDs")
+                            if message["Media Type"] == "NOTE" and media_id:
+                                media_ids_files.pop(media_id, None)
                             if message["Media Type"] == "MEDIA" and media_id and media_id in media_ids_files:
                                 nb += 1
                                 path = media_ids_files[media_id]
@@ -152,11 +154,18 @@ class SnapChat(SocialNetwork):
                                     ext = ".gif"
                                 timestamp_ms = int(message["Created(microseconds)"]) // 1000
                                 dt = datetime.fromtimestamp(timestamp_ms)
-                                new_filename = dt.strftime(f"%d-%m-%y_%Hh_%Mm_%Ss") + f"_{dt.microsecond // 100000}-{contact}{ext}"
+                                new_filename = dt.strftime(f"%Y-%m-%d_%Hh_%Mm_%Ss") + f"_{dt.microsecond // 100000}-{contact}{ext}"
                                 out_path = os.path.join(export_folder, new_filename)
                                 with package.open(path) as source_file, open(out_path, "wb") as target_file:
                                     data = source_file.read()
                                     target_file.write(data)
+                                media_ids_files.pop(media_id, None)
+                    for _, path in tqdm(media_ids_files.items()):
+                        out_path = os.path.join(export_folder, path.split("/")[1])
+                        with package.open(path) as source_file, open(out_path, "wb") as target_file:
+                            data = source_file.read()
+                            target_file.write(data)
+                        nb += 1
                     print(f"\n{nb} media exported")
-        except Exception as e:
-            print(e)
+        # except Exception as e:
+        #     print(e)

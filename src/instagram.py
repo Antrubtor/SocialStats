@@ -130,7 +130,7 @@ class Instagram(SocialNetwork):
     def __move_file(self, path, timestamp_ms, contact, export_folder, package):
         ext = os.path.splitext(path)[1]
         dt = datetime.fromtimestamp(timestamp_ms)
-        new_filename = dt.strftime(f"%y-%m-%d_%Hh_%Mm_%Ss") + f"_{dt.microsecond // 100000}-{contact}{ext}"
+        new_filename = dt.strftime(f"%Y-%m-%d_%Hh_%Mm_%Ss") + f"_{dt.microsecond // 100000}-{contact}{ext}"
         out_path = os.path.join(export_folder, new_filename)
         with package.open(path) as source_file, open(out_path, "wb") as target_file:
             data = source_file.read()
