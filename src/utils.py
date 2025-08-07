@@ -329,7 +329,7 @@ def __add_jpeg_metadata(path, dt, contact = None):
     except Exception as e:
         print(f"[EXIF ERROR] {path}: {e}")
 
-def __add_png_metadata(path, dt):
+def __add_file_metadata(path, dt):
     timestamp = time.mktime(dt.timetuple())
     os.utime(path, (timestamp, timestamp))
 
@@ -347,10 +347,10 @@ def add_metadata(path, dt, ext, infos):
             __add_jpeg_metadata(path, dt, infos["contact"])
         else:
             __add_jpeg_metadata(path, dt)
-    elif ext in [".png"]:
-        __add_png_metadata(path, dt)
     elif ext in [".mp4"]:
         __add_mp4_metadata(path, dt)
+    else:
+        __add_file_metadata(path, dt)
 
 
 

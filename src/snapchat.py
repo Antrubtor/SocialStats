@@ -1,4 +1,3 @@
-
 from src.socialnetwork import *
 
 class SnapChat(SocialNetwork):
@@ -129,7 +128,7 @@ class SnapChat(SocialNetwork):
 
 
     def medias_process(self):
-        # try:
+        try:
             with zipfile.ZipFile(self.path, mode="r") as package:
                 media_ids_files = {}
                 for filename in package.namelist():
@@ -202,6 +201,6 @@ class SnapChat(SocialNetwork):
                             if check_no_date or "contact" in infos:
                                 add_metadata(out_path, dt, ext, infos)
                         nb += 1
-                    print(f"\n{nb} media exported")
-        # except Exception as e:
-        #     print(e)
+                    print(f"\n{nb} media exported") # TODO: check how to do it for memories
+        except Exception as e:
+            print(e)
