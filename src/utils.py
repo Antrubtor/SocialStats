@@ -12,6 +12,7 @@ from pathlib import Path
 from mutagen.mp4 import MP4
 from InquirerPy import inquirer
 from collections import defaultdict
+from PIL import PngImagePlugin, Image
 from datetime import datetime, timedelta
 
 from openpyxl import Workbook
@@ -326,31 +327,57 @@ def __add_jpeg_metadata(path, dt, contact = None):
             exif_dict["0th"][piexif.ImageIFD.Artist] = comment.encode('utf-8')
         exif_bytes = piexif.dump(exif_dict)
         piexif.insert(exif_bytes, path)
+
+        timestamp = time.mktime(dt.timetuple())
+        os.utime(path, (timestamp, timestamp))
     except Exception as e:
         print(f"[EXIF ERROR] {path}: {e}")
 
-def __add_file_metadata(path, dt):
-    timestamp = time.mktime(dt.timetuple())
-    os.utime(path, (timestamp, timestamp))
+def __add_png_metadata(path, dt, author=None):
+    try:
+        img = Image.open(path)
+        meta = PngImagePlugin.PngInfo()
+        meta.add_text("Creation Time", dt.strftime("%Y-%m-%d %H:%M:%S"))
+        meta.add_text("File Access Date", dt.strftime("%Y-%m-%d %H:%M:%S"))
+        meta.add_text("File Inode Change Date", dt.strftime("%Y-%m-%d %H:%M:%S"))
+        meta.add_text("File Modify Date", dt.strftime("%Y-%m-%d %H:%M:%S"))
+        if author:
+            meta.add_text("Author", author)
+        img.save(path, pnginfo=meta)
+        
+        timestamp = time.mktime(dt.timetuple())
+        os.utime(path, (timestamp, timestamp))
+    except Exception as e:
+        print(f"[PNG ERROR] {path}: {e}")
 
 def __add_mp4_metadata(path, dt):
     try:
         mp4 = MP4(path)
         mp4["\xa9day"] = [dt.strftime("%Y-%m-%d")]
         mp4.save()
+
+        timestamp = time.mktime(dt.timetuple())
+        os.utime(path, (timestamp, timestamp))
     except Exception as e:
-        print(f"[MP4 ERROR] {path}: {e}")
+        print(f"[MP4 ERROR] {path}: {e} — applying fallback.")
+
 
 def add_metadata(path, dt, ext, infos):
-    if ext in [".jpg", ".jpeg"]:
+    if ext in [".jpg", ".jpeg", ".webp"]:
         if "contact" in infos:
             __add_jpeg_metadata(path, dt, infos["contact"])
         else:
             __add_jpeg_metadata(path, dt)
+    elif ext in [".png"]:
+        if "contact" in infos:
+            __add_png_metadata(path, dt, infos["contact"])
+        else:
+            __add_png_metadata(path, dt)
     elif ext in [".mp4"]:
         __add_mp4_metadata(path, dt)
     else:
-        __add_file_metadata(path, dt)
+        timestamp = time.mktime(dt.timetuple())
+        os.utime(path, (timestamp, timestamp))
 
 
 
