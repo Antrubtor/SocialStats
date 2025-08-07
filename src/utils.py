@@ -1,11 +1,15 @@
 import re
 import os
+import io
 import sys
 import json
+import time
 import struct
+import piexif
 import zipfile
 from tqdm import tqdm
 from pathlib import Path
+from mutagen.mp4 import MP4
 from InquirerPy import inquirer
 from collections import defaultdict
 from datetime import datetime, timedelta
@@ -309,6 +313,45 @@ def generate_excel(per_contact_stats, messages_per_day, hour_distribution, excel
     create_directory("Excels")
     wb.save(f"Excels/{base_name}")
     print(f"Excels/{base_name} was successfully created")
+
+def __add_jpeg_metadata(path, dt, contact = None):
+    try:
+        exif_dict = piexif.load(path)
+        date_str = dt.strftime("%Y:%m:%d %H:%M:%S")
+        exif_dict["0th"][piexif.ImageIFD.DateTime] = date_str.encode('utf-8')
+        exif_dict["Exif"][piexif.ExifIFD.DateTimeOriginal] = date_str.encode('utf-8')
+        exif_dict["Exif"][piexif.ExifIFD.DateTimeDigitized] = date_str.encode('utf-8')
+        if contact is not None:
+            comment = f"Contact: {contact}"
+            exif_dict["0th"][piexif.ImageIFD.Artist] = comment.encode('utf-8')
+        exif_bytes = piexif.dump(exif_dict)
+        piexif.insert(exif_bytes, path)
+    except Exception as e:
+        print(f"[EXIF ERROR] {path}: {e}")
+
+def __add_png_metadata(path, dt):
+    timestamp = time.mktime(dt.timetuple())
+    os.utime(path, (timestamp, timestamp))
+
+def __add_mp4_metadata(path, dt):
+    try:
+        mp4 = MP4(path)
+        mp4["\xa9day"] = [dt.strftime("%Y-%m-%d")]
+        mp4.save()
+    except Exception as e:
+        print(f"[MP4 ERROR] {path}: {e}")
+
+def add_metadata(path, dt, ext, infos):
+    if ext in [".jpg", ".jpeg"]:
+        if "contact" in infos:
+            __add_jpeg_metadata(path, dt, infos["contact"])
+        else:
+            __add_jpeg_metadata(path, dt)
+    elif ext in [".png"]:
+        __add_png_metadata(path, dt)
+    elif ext in [".mp4"]:
+        __add_mp4_metadata(path, dt)
+
 
 
 def generate_merge_template(file_path="merge_map.csv"):

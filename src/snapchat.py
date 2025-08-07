@@ -1,3 +1,4 @@
+
 from src.socialnetwork import *
 
 class SnapChat(SocialNetwork):
@@ -5,7 +6,7 @@ class SnapChat(SocialNetwork):
         actions = [
             Action("I want to do statistics on messages", self.messages_process),
             Action("I want to export conversations to a unified JSON format (work in progress)", self.export_process),
-            Action("I want to tidy up the media", self.medias_process)
+            Action("I want to export the media for my gallery (with their date and author)", self.medias_process)
         ]
         selected = ask(f"What do you want to do with your {self.__class__.__name__} package?", actions)
         selected.execute()
@@ -125,6 +126,8 @@ class SnapChat(SocialNetwork):
         print("Wait for next updates to get this feature")
         pass
 
+
+
     def medias_process(self):
         # try:
             with zipfile.ZipFile(self.path, mode="r") as package:
@@ -132,39 +135,72 @@ class SnapChat(SocialNetwork):
                 for filename in package.namelist():
                     if filename.startswith("chat_media/") and "_" in filename:
                         try:
-                            media_ids_files[filename.split("_")[2].split(".")[0]] = filename
+                            media_ids_files[filename.split("_")[2].split(".")[0]] = {"filename": filename}
                         except IndexError:
                             continue
-                # media_ids_files = {}    # TODO: remove
                 nb = 0
                 with package.open("json/chat_history.json", mode="r") as msg:
                     sections = json.load(msg)
                     export_folder = f"Media/{self.__class__.__name__}/"
                     os.makedirs(export_folder, exist_ok=True)
                     for contact, messages in tqdm(sections.items()):
-                        for message in tqdm(messages, leave=False):
+                        for message in tqdm(messages):
                             media_id = message.get("Media IDs")
-                            if message["Media Type"] == "NOTE" and media_id:
+                            if message["Media Type"] == "NOTE" and media_id:    # Remove all audio msg
                                 media_ids_files.pop(media_id, None)
+
                             if message["Media Type"] == "MEDIA" and media_id and media_id in media_ids_files:
-                                nb += 1
-                                path = media_ids_files[media_id]
-                                ext = os.path.splitext(path)[1]
-                                if ext == ".unknown":
-                                    ext = ".gif"
                                 timestamp_ms = int(message["Created(microseconds)"]) // 1000
-                                dt = datetime.fromtimestamp(timestamp_ms)
-                                new_filename = dt.strftime(f"%Y-%m-%d_%Hh_%Mm_%Ss") + f"_{dt.microsecond // 100000}-{contact}{ext}"
-                                out_path = os.path.join(export_folder, new_filename)
-                                with package.open(path) as source_file, open(out_path, "wb") as target_file:
-                                    data = source_file.read()
-                                    target_file.write(data)
-                                media_ids_files.pop(media_id, None)
-                    for _, path in tqdm(media_ids_files.items()):
-                        out_path = os.path.join(export_folder, path.split("/")[1])
-                        with package.open(path) as source_file, open(out_path, "wb") as target_file:
+                                media_ids_files[media_id]["date"] = datetime.fromtimestamp(timestamp_ms)
+                                media_ids_files[media_id]["contact"] = contact
+                    for _, infos in tqdm(media_ids_files.items(), leave=False):
+                        path = infos["filename"]
+                        file_name = path.split("/")[1]
+                        ext = os.path.splitext(file_name)[1].lower()
+
+                        with package.open(path) as source_file:
                             data = source_file.read()
-                            target_file.write(data)
+                            dt = None
+
+                            if ext in [".jpg", ".jpeg"]:
+                                try:
+                                    exif_dict = piexif.load(data)
+                                    dt_bytes = exif_dict["Exif"].get(piexif.ExifIFD.DateTimeOriginal)
+                                    if dt_bytes:
+                                        dt_str = dt_bytes.decode("utf-8")
+                                        dt = datetime.strptime(dt_str, "%Y:%m:%d %H:%M:%S")
+                                except Exception:
+                                    pass
+
+                            elif ext == ".mp4":
+                                try:
+                                    mp4 = MP4(io.BytesIO(data))
+                                    if "\xa9day" in mp4:
+                                        dt = datetime.strptime(mp4["\xa9day"][0], "%Y-%m-%d")
+                                except Exception:
+                                    pass
+                            check_no_date = False
+                            if not dt:
+                                check_no_date = True
+                                if "date" in infos:
+                                    dt = infos["date"]
+                                else:
+                                    dt = datetime.strptime(file_name.split("_")[0], "%Y-%m-%d")
+                            # Conflict
+                            counter = 1
+                            base_name = dt.strftime("%Y-%m-%d %H.%M.%S")
+                            new_filename = f"{base_name}{ext}"
+                            out_path = os.path.join(export_folder, new_filename)
+                            while os.path.exists(out_path):
+                                new_filename = f"{base_name}_{counter}{ext}"
+                                out_path = os.path.join(export_folder, new_filename)
+                                counter += 1
+
+                            out_path = os.path.join(export_folder, new_filename)
+                            with open(out_path, "wb") as target_file:
+                                target_file.write(data)
+                            if check_no_date or "contact" in infos:
+                                add_metadata(out_path, dt, ext, infos)
                         nb += 1
                     print(f"\n{nb} media exported")
         # except Exception as e:
