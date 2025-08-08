@@ -333,7 +333,7 @@ def __add_jpeg_metadata(path, dt, contact = None):
     except Exception as e:
         print(f"[EXIF ERROR] {path}: {e}")
 
-def __add_png_metadata(path, dt, author=None):
+def __add_png_metadata(path, dt, contact=None):
     try:
         img = Image.open(path)
         meta = PngImagePlugin.PngInfo()
@@ -341,8 +341,8 @@ def __add_png_metadata(path, dt, author=None):
         meta.add_text("File Access Date", dt.strftime("%Y-%m-%d %H:%M:%S"))
         meta.add_text("File Inode Change Date", dt.strftime("%Y-%m-%d %H:%M:%S"))
         meta.add_text("File Modify Date", dt.strftime("%Y-%m-%d %H:%M:%S"))
-        if author:
-            meta.add_text("Author", author)
+        if contact is not None:
+            meta.add_text("Author", f"Contact: {contact}")
         img.save(path, pnginfo=meta)
         
         timestamp = time.mktime(dt.timetuple())
@@ -362,17 +362,11 @@ def __add_mp4_metadata(path, dt):
         print(f"[MP4 ERROR] {path}: {e} — applying fallback.")
 
 
-def add_metadata(path, dt, ext, infos):
+def add_metadata(path, dt, ext, contact=None):
     if ext in [".jpg", ".jpeg", ".webp"]:
-        if "contact" in infos:
-            __add_jpeg_metadata(path, dt, infos["contact"])
-        else:
-            __add_jpeg_metadata(path, dt)
+        __add_jpeg_metadata(path, dt, contact)
     elif ext in [".png"]:
-        if "contact" in infos:
-            __add_png_metadata(path, dt, infos["contact"])
-        else:
-            __add_png_metadata(path, dt)
+        __add_png_metadata(path, dt, contact)
     elif ext in [".mp4"]:
         __add_mp4_metadata(path, dt)
     else:

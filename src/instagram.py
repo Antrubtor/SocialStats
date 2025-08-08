@@ -129,12 +129,22 @@ class Instagram(SocialNetwork):
 
     def __move_file(self, path, timestamp_ms, contact, export_folder, package):
         ext = os.path.splitext(path)[1]
+        if ext == "":
+            ext = ".jpg"
         dt = datetime.fromtimestamp(timestamp_ms)
-        new_filename = dt.strftime(f"%Y-%m-%d_%Hh_%Mm_%Ss") + f"_{dt.microsecond // 100000}-{contact}{ext}"
+
+        counter = 1
+        base_name = dt.strftime("%Y-%m-%d %H.%M.%S")
+        new_filename = f"{base_name}{ext}"
         out_path = os.path.join(export_folder, new_filename)
+        while os.path.exists(out_path):
+            new_filename = f"{base_name}_{counter}{ext}"
+            out_path = os.path.join(export_folder, new_filename)
+            counter += 1
         with package.open(path) as source_file, open(out_path, "wb") as target_file:
             data = source_file.read()
             target_file.write(data)
+        add_metadata(out_path, dt, ext, contact)
 
     def medias_process(self):
         try:

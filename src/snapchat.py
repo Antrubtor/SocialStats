@@ -194,12 +194,13 @@ class SnapChat(SocialNetwork):
                                 new_filename = f"{base_name}_{counter}{ext}"
                                 out_path = os.path.join(export_folder, new_filename)
                                 counter += 1
-
-                            out_path = os.path.join(export_folder, new_filename)
                             with open(out_path, "wb") as target_file:
                                 target_file.write(data)
                             if check_no_date or "contact" in infos:
-                                add_metadata(out_path, dt, ext, infos)
+                                if "contact" in infos:
+                                    add_metadata(out_path, dt, ext, infos["contact"])
+                                else:
+                                    add_metadata(out_path, dt, ext)
                         nb += 1
                     print(f"\n{nb} media exported") # TODO: check how to do it for memories
         except Exception as e:
