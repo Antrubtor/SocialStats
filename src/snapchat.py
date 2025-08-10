@@ -130,6 +130,9 @@ class SnapChat(SocialNetwork):
     def medias_process(self):
         try:
             with zipfile.ZipFile(self.path, mode="r") as package:
+                with package.open("json/account.json", mode="r") as account:
+                    sections = json.load(account)
+                    pseudo = sections["Basic Information"]["Username"]
                 media_ids_files = {}
                 for filename in package.namelist():
                     if filename.startswith("chat_media/") and "_" in filename:
@@ -140,7 +143,7 @@ class SnapChat(SocialNetwork):
                 nb = 0
                 with package.open("json/chat_history.json", mode="r") as msg:
                     sections = json.load(msg)
-                    export_folder = f"Media/{self.__class__.__name__}/"
+                    export_folder = os.path.join("Media", self.__class__.__name__)
                     os.makedirs(export_folder, exist_ok=True)
                     for contact, messages in tqdm(sections.items()):
                         for message in tqdm(messages):
@@ -152,6 +155,12 @@ class SnapChat(SocialNetwork):
                                 timestamp_ms = int(message["Created(microseconds)"]) // 1000
                                 media_ids_files[media_id]["date"] = datetime.fromtimestamp(timestamp_ms)
                                 media_ids_files[media_id]["contact"] = contact
+                                if message["From"] == pseudo:
+                                    media_ids_files[media_id]["send"] = pseudo
+                                    media_ids_files[media_id]["res"] = contact
+                                else:
+                                    media_ids_files[media_id]["send"] = contact
+                                    media_ids_files[media_id]["res"] = pseudo
                     for _, infos in tqdm(media_ids_files.items(), leave=False):
                         path = infos["filename"]
                         file_name = path.split("/")[1]
@@ -185,23 +194,30 @@ class SnapChat(SocialNetwork):
                                     dt = infos["date"]
                                 else:
                                     dt = datetime.strptime(file_name.split("_")[0], "%Y-%m-%d")
+                            ctt = ""
+                            send = None
+                            res = None
+                            if "contact" in infos and "send" in infos and "res" in infos:
+                                ctt = "_" + infos["contact"]
+                                send = infos["send"]
+                                res = infos["res"]
                             # Conflict
                             counter = 1
                             base_name = dt.strftime("%Y-%m-%d %H.%M.%S")
-                            new_filename = f"{base_name}{ext}"
+                            new_filename = f"{base_name}{ctt}{ext}"
                             out_path = os.path.join(export_folder, new_filename)
                             while os.path.exists(out_path):
-                                new_filename = f"{base_name}_{counter}{ext}"
+                                new_filename = f"{base_name}{ctt}_{counter}{ext}"
                                 out_path = os.path.join(export_folder, new_filename)
                                 counter += 1
                             with open(out_path, "wb") as target_file:
                                 target_file.write(data)
                             if check_no_date or "contact" in infos:
                                 if "contact" in infos:
-                                    add_metadata(out_path, dt, ext, infos["contact"])
+                                    add_metadata(out_path, dt, ext, infos["contact"], send, res)
                                 else:
                                     add_metadata(out_path, dt, ext)
                         nb += 1
-                    print(f"\n{nb} media exported") # TODO: check how to do it for memories
+                    print(f"\n{nb} media exported in {os.path.join(os.getcwd(), export_folder)}") # TODO: check how to do it for memories
         except Exception as e:
             print(e)
