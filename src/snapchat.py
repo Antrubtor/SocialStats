@@ -216,3 +216,4 @@ class SnapChat(SocialNetwork):
                 folium.PolyLine(coords, color="red", weight=3, opacity=0.8).add_to(m)
 
                 m.save("map.html")
+                print(f"Map successfully saved to {os.path.join(os.getcwd(), "map.html")}")
