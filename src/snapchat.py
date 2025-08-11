@@ -182,38 +182,41 @@ class SnapChat(SocialNetwork):
             return None, None
 
     def map_process(self):
-        with zipfile.ZipFile(self.path, mode="r") as package:
-            with package.open("json/location_history.json", mode="r") as loc:
-                sections = json.load(loc)
-                data = sections["Location History"]
+        try:
+            with zipfile.ZipFile(self.path, mode="r") as package:
+                with package.open("json/location_history.json", mode="r") as loc:
+                    sections = json.load(loc)
+                    data = sections["Location History"]
 
-                points = []
-                for date_s, coord_s in data:
-                    dt = datetime.strptime(date_s, "%Y-%m-%d %H:%M:%S %Z")
+                    points = []
+                    for date_s, coord_s in data:
+                        dt = datetime.strptime(date_s, "%Y-%m-%d %H:%M:%S %Z")
 
-                    lat, lon = self.__parse_coord(coord_s)
-                    if dt is None or lat is None or lon is None:
-                        continue
-                    points.append((dt, lat, lon, coord_s))
+                        lat, lon = self.__parse_coord(coord_s)
+                        if dt is None or lat is None or lon is None:
+                            continue
+                        points.append((dt, lat, lon, coord_s))
 
-                points.sort(key=lambda x: x[0])
+                    points.sort(key=lambda x: x[0])
 
-                if not points:
-                    print("Error with data")
-                    return
+                    if not points:
+                        print("Error with data")
+                        return
 
-                m = folium.Map(location=[points[0][1], points[0][2]], zoom_start=6)
+                    m = folium.Map(location=[points[0][1], points[0][2]], zoom_start=6)
 
-                for i, (dt, lat, lon, orig) in enumerate(points, start=1):
-                    popup_html = f"<b>{dt.isoformat()}</b><br/>{orig}"
-                    folium.Marker(
-                        location=[lat, lon],
-                        popup=folium.Popup(popup_html, max_width=300),
-                        tooltip=f"{i}. {dt.strftime('%Y-%m-%d %H:%M:%S')}"
-                    ).add_to(m)
+                    for i, (dt, lat, lon, orig) in enumerate(points, start=1):
+                        popup_html = f"<b>{dt.isoformat()}</b><br/>{orig}"
+                        folium.Marker(
+                            location=[lat, lon],
+                            popup=folium.Popup(popup_html, max_width=300),
+                            tooltip=f"{i}. {dt.strftime('%Y-%m-%d %H:%M:%S')}"
+                        ).add_to(m)
 
-                coords = [(lat, lon) for _, lat, lon, _ in points]
-                folium.PolyLine(coords, color="red", weight=3, opacity=0.8).add_to(m)
+                    coords = [(lat, lon) for _, lat, lon, _ in points]
+                    folium.PolyLine(coords, color="red", weight=3, opacity=0.8).add_to(m)
 
-                m.save("map.html")
-                print(f"Map successfully saved to {os.path.join(os.getcwd(), "map.html")}")
+                    m.save("map.html")
+                    print(f"Map successfully saved to {os.path.join(os.getcwd(), "map.html")}")
+        except Exception as e:
+            print(e)
