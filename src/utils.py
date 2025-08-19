@@ -1,13 +1,18 @@
 import re
 import os
+import io
 import sys
 import json
+import time
 import struct
+import piexif
 import zipfile
 from tqdm import tqdm
 from pathlib import Path
+from mutagen.mp4 import MP4
 from InquirerPy import inquirer
 from collections import defaultdict
+from PIL import PngImagePlugin, Image
 from datetime import datetime, timedelta
 
 from openpyxl import Workbook
@@ -309,6 +314,73 @@ def generate_excel(per_contact_stats, messages_per_day, hour_distribution, excel
     create_directory("Excels")
     wb.save(f"Excels/{base_name}")
     print(f"Excels/{base_name} was successfully created")
+
+def __add_jpeg_metadata(path, dt, contact=None, send=None, res=None):
+    try:
+        exif_dict = piexif.load(path)
+        date_str = dt.strftime("%Y:%m:%d %H:%M:%S")
+        exif_dict["0th"][piexif.ImageIFD.DateTime] = date_str.encode('utf-8')
+        exif_dict["Exif"][piexif.ExifIFD.DateTimeOriginal] = date_str.encode('utf-8')
+        exif_dict["Exif"][piexif.ExifIFD.DateTimeDigitized] = date_str.encode('utf-8')
+        if contact and send and res:
+            exif_dict["0th"][piexif.ImageIFD.Artist] = send.encode('utf-8')
+            exif_dict["0th"][piexif.ImageIFD.ImageDescription] = f"{send} to {res}".encode('utf-8')
+            exif_dict["0th"][piexif.ImageIFD.XPTitle] = f"Contact: {contact}".encode('utf-16le')
+        elif contact:
+            exif_dict["0th"][piexif.ImageIFD.Artist] = f"Contact: {contact}".encode('utf-8')
+            exif_dict["0th"][piexif.ImageIFD.ImageDescription] = f"Contact: {contact}".encode('utf-8')
+            exif_dict["0th"][piexif.ImageIFD.XPTitle] = f"Contact: {contact}".encode('utf-16le')
+        exif_bytes = piexif.dump(exif_dict)
+        piexif.insert(exif_bytes, path)
+    except Exception as e:
+        print(f"[EXIF ERROR] {path}: {e}")
+
+def __add_png_metadata(path, dt, contact=None, send=None, res=None):
+    try:
+        img = Image.open(path)
+        meta = PngImagePlugin.PngInfo()
+        meta.add_text("Creation Time", dt.strftime("%Y-%m-%d %H:%M:%S"))
+        meta.add_text("File Access Date", dt.strftime("%Y-%m-%d %H:%M:%S"))
+        meta.add_text("File Inode Change Date", dt.strftime("%Y-%m-%d %H:%M:%S"))
+        meta.add_text("File Modify Date", dt.strftime("%Y-%m-%d %H:%M:%S"))
+        if send and res:
+            meta.add_text("Author", send)
+            meta.add_text("Title", f"{send} to {res}")
+        elif contact:
+            meta.add_text("Author", f"Contact: {contact}")
+            meta.add_text("Title", f"Contact: {contact}")
+        img.save(path, pnginfo=meta)
+    except Exception as e:
+        print(f"[PNG ERROR] {path}: {e}")
+
+def __add_mp4_metadata(path, dt, contact=None, send=None, res=None):
+    try:
+        mp4 = MP4(path)
+        mp4["\xa9day"] = [dt.strftime("%Y-%m-%d")]
+        if send and res:
+            mp4["\xa9nam"] = [f"{send} to {res}"]
+            mp4["\xa9ART"] = [send]
+        elif contact:
+            mp4["\xa9nam"] = [f"Contact: {contact}"]
+            mp4["\xa9ART"] = [f"Contact: {contact}"]
+        mp4.save()
+    except Exception as e:
+        print(f"[MP4 ERROR] {path}: {e} — applying fallback.")
+
+
+def add_metadata(path, dt, ext, contact=None, send=None, res=None):
+    if ext in [".jpg", ".jpeg", ".webp"]:
+        __add_jpeg_metadata(path, dt, contact, send, res)
+    elif ext in [".png"]:
+        __add_png_metadata(path, dt, contact, send, res)
+    elif ext in [".mp4"]:
+        __add_mp4_metadata(path, dt, contact, send, res)
+    try:
+        timestamp = time.mktime(dt.timetuple())
+        os.utime(path, (timestamp, timestamp))
+    except Exception as e:
+        print(f"[DATE ERROR] {path}: {e}")
+
 
 
 def generate_merge_template(file_path="merge_map.csv"):

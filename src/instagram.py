@@ -5,7 +5,7 @@ class Instagram(SocialNetwork):
         actions = [
             Action("I want to do statistics on messages", self.messages_process),
             Action("I want to export conversations to a unified JSON format (work in progress)", self.export_process),
-            Action("I want to tidy up the media", self.medias_process)
+            Action("I want to export the media for my gallery (with their date and author)", self.medias_process)
         ]
         selected = ask(f"What do you want to do with your {self.__class__.__name__} package?", actions)
         selected.execute()
@@ -127,20 +127,33 @@ class Instagram(SocialNetwork):
         print("Wait for next updates to get this feature")
         pass
 
-    def __move_file(self, path, timestamp_ms, contact, export_folder, package):
+    def __move_file(self, path, timestamp_ms, contact, export_folder, package, send, res):
         ext = os.path.splitext(path)[1]
+        if ext == "":
+            ext = ".jpg"
         dt = datetime.fromtimestamp(timestamp_ms)
-        new_filename = dt.strftime(f"%Y-%m-%d_%Hh_%Mm_%Ss") + f"_{dt.microsecond // 100000}-{contact}{ext}"
+
+        counter = 1
+        base_name = dt.strftime("%Y-%m-%d %H.%M.%S")
+        new_filename = f"{base_name}_{contact}{ext}"
         out_path = os.path.join(export_folder, new_filename)
+        while os.path.exists(out_path):
+            new_filename = f"{base_name}_{contact}_{counter}{ext}"
+            out_path = os.path.join(export_folder, new_filename)
+            counter += 1
         with package.open(path) as source_file, open(out_path, "wb") as target_file:
             data = source_file.read()
             target_file.write(data)
+        add_metadata(out_path, dt, ext, contact, send, res)
 
     def medias_process(self):
         try:
             with zipfile.ZipFile(self.path, mode="r") as package:
+                with package.open("personal_information/personal_information/personal_information.json", mode="r") as account:
+                    sections = json.load(account)
+                    pseudo = sections["profile_user"][0]["string_map_data"]["Name"]["value"]
                 nb = 0
-                export_folder = f"Media/{self.__class__.__name__}/"
+                export_folder = os.path.join("Media", self.__class__.__name__)
                 os.makedirs(export_folder, exist_ok=True)
                 msg_files = [file for file in package.infolist()
                              if file.filename.startswith("your_instagram_activity/messages/inbox")
@@ -151,17 +164,22 @@ class Instagram(SocialNetwork):
                         contact = file.filename.replace("your_instagram_activity/messages/inbox/", "").rsplit('/', 1)[0].rsplit('_', 1)[0]
                         chat = json.load(msg)
                         messages = chat["messages"]
-                        for message in tqdm(messages, leave=False):
+                        for message in messages:
+                            send = contact
+                            res = pseudo
+                            if message["sender_name"] == pseudo:
+                                send = pseudo
+                                res = contact
                             timestamp_ms = int(message["timestamp_ms"]) // 1000
 
                             if "videos" in message:
                                 for vid in message["videos"]:
-                                    self.__move_file(vid["uri"], timestamp_ms, contact, export_folder, package)
+                                    self.__move_file(vid["uri"], timestamp_ms, contact, export_folder, package, send, res)
                                     nb += 1
                             if "photos" in message:
                                 for pic in message["photos"]:
-                                    self.__move_file(pic["uri"], timestamp_ms, contact, export_folder, package)
+                                    self.__move_file(pic["uri"], timestamp_ms, contact, export_folder, package, send, res)
                                     nb += 1
-                print(f"\n{nb} media exported")
+                print(f"\n{nb} media exported in {os.path.join(os.getcwd(), export_folder)}")
         except Exception as e:
             print(e)
