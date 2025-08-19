@@ -218,6 +218,29 @@ class SnapChat(SocialNetwork):
                                 else:
                                     add_metadata(out_path, dt, ext)
                         nb += 1
-                    print(f"\n{nb} media exported in {os.path.join(os.getcwd(), export_folder)}") # TODO: check how to do it for memories
+
+                    memories_files = [file for file in package.infolist()
+                                 if file.filename.startswith("memories")
+                                 and (file.filename.endswith(".mp4") or file.filename.endswith(".jpg") or file.filename.endswith(".png") or file.filename.endswith(".webp"))
+                                 and not file.is_dir()]
+                    for memory in tqdm(memories_files, leave=False):
+                        with package.open(memory.filename) as source_file:
+                            data = source_file.read()
+                        file_name = memory.filename.split("/")[-1]
+                        ext = os.path.splitext(file_name)[1].lower()
+                        dt = datetime.strptime(file_name.split("_")[0], "%Y-%m-%d")
+                        counter = 1
+                        base_name = dt.strftime("%Y-%m-%d %H.%M.%S")
+                        new_filename = f"{base_name}{ext}"
+                        out_path = os.path.join(export_folder, new_filename)
+                        while os.path.exists(out_path):
+                            new_filename = f"{base_name}_{counter}{ext}"
+                            out_path = os.path.join(export_folder, new_filename)
+                            counter += 1
+                        with open(out_path, "wb") as target_file:
+                            target_file.write(data)
+                        add_metadata(out_path, dt, ext)
+                        nb += 1
+                    print(f"\n{nb} media exported in {os.path.join(os.getcwd(), export_folder)}")
         except Exception as e:
             print(e)
