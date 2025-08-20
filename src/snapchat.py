@@ -207,8 +207,12 @@ class SnapChat(SocialNetwork):
 
                     for i, (dt, lat, lon, orig) in enumerate(points, start=1):
                         popup_html = f"<b>{dt.isoformat()}</b><br/>{orig}"
-                        folium.Marker(
+                        folium.CircleMarker(
                             location=[lat, lon],
+                            radius=4,
+                            color="blue",
+                            fill=True,
+                            fill_color="blue",
                             popup=folium.Popup(popup_html, max_width=300),
                             tooltip=f"{i}. {dt.strftime('%Y-%m-%d %H:%M:%S')}"
                         ).add_to(m)
