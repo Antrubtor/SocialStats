@@ -1,3 +1,4 @@
+import folium
 from src.socialnetwork import *
 
 class SnapChat(SocialNetwork):
@@ -5,7 +6,8 @@ class SnapChat(SocialNetwork):
         actions = [
             Action("I want to do statistics on messages", self.messages_process),
             Action("I want to export conversations to a unified JSON format (work in progress)", self.export_process),
-            Action("I want to export the media for my gallery (with their date and author)", self.medias_process)
+            Action("I want to export the media for my gallery (with their date and author)", self.medias_process),
+            Action("I want to display all my journeys on a map", self.map_process)
         ]
         selected = ask(f"What do you want to do with your {self.__class__.__name__} package?", actions)
         selected.execute()
@@ -242,5 +244,58 @@ class SnapChat(SocialNetwork):
                         add_metadata(out_path, dt, ext)
                         nb += 1
                     print(f"\n{nb} media exported in {os.path.join(os.getcwd(), export_folder)}")
+        except Exception as e:
+            print(e)
+
+    def __parse_coord(self, coord_s):
+        try:
+            parts = coord_s.split(",")
+            lat_str = parts[0].split("±")[0].strip()
+            lon_str = parts[1].split("±")[0].strip()
+            return float(lat_str), float(lon_str)
+        except Exception:
+            return None, None
+
+    def map_process(self):
+        try:
+            with zipfile.ZipFile(self.path, mode="r") as package:
+                with package.open("json/location_history.json", mode="r") as loc:
+                    sections = json.load(loc)
+                    data = sections["Location History"]
+
+                    points = []
+                    for date_s, coord_s in data:
+                        dt = datetime.strptime(date_s, "%Y-%m-%d %H:%M:%S %Z")
+
+                        lat, lon = self.__parse_coord(coord_s)
+                        if dt is None or lat is None or lon is None:
+                            continue
+                        points.append((dt, lat, lon, coord_s))
+
+                    points.sort(key=lambda x: x[0])
+
+                    if not points:
+                        print("Error with data")
+                        return
+
+                    m = folium.Map(location=[points[0][1], points[0][2]], zoom_start=6)
+
+                    for i, (dt, lat, lon, orig) in enumerate(points, start=1):
+                        popup_html = f"<b>{dt.isoformat()}</b><br/>{orig}"
+                        folium.CircleMarker(
+                            location=[lat, lon],
+                            radius=4,
+                            color="blue",
+                            fill=True,
+                            fill_color="blue",
+                            popup=folium.Popup(popup_html, max_width=300),
+                            tooltip=f"{i}. {dt.strftime('%Y-%m-%d %H:%M:%S')}"
+                        ).add_to(m)
+
+                    coords = [(lat, lon) for _, lat, lon, _ in points]
+                    folium.PolyLine(coords, color="red", weight=3, opacity=0.8).add_to(m)
+
+                    m.save("map.html")
+                    print(f"Map successfully saved to {os.path.join(os.getcwd(), "map.html")}")
         except Exception as e:
             print(e)
