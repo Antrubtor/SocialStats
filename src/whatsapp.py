@@ -154,4 +154,10 @@ class WhatsApp(SocialNetwork):
 
     def export_process(self):
         print("Wait for next updates to get this feature")
-        pass
+        for chat in tqdm(self.path):
+            with zipfile.ZipFile(chat, mode="r") as package:
+                for file in package.infolist():
+                    if file.filename.endswith(".txt"):
+                        contact = file.filename.replace("WhatsApp Chat with ", "").replace(".txt", "")
+                        with package.open(file.filename, mode="r") as msg:
+                            messages = self.__parse_whatsapp_chat(msg.read().decode("utf-8"))

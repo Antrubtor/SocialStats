@@ -127,8 +127,6 @@ class SnapChat(SocialNetwork):
         print("Wait for next updates to get this feature")
         pass
 
-
-
     def medias_process(self):
         try:
             with zipfile.ZipFile(self.path, mode="r") as package:
