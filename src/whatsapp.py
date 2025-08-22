@@ -1,5 +1,3 @@
-import datetime
-
 from src.socialnetwork import *
 
 class WhatsApp(SocialNetwork):
@@ -20,7 +18,7 @@ class WhatsApp(SocialNetwork):
         selected.execute()
 
 
-    def __parse_whatsapp_chat(self, text):
+    def __parse_whatsapp_chat(self, text, str_timestamp=False):
         msg_pattern = re.compile(r"^(\d{1,2}/\d{1,2}/\d{2,4}), (\d{2}:\d{2}) - ")
         messages = []
         current_msg = None
@@ -48,11 +46,14 @@ class WhatsApp(SocialNetwork):
 
                 if current_msg:
                     messages.append(current_msg)
+                if str_timestamp and timestamp:
+                    timestamp = str(timestamp)
 
                 current_msg = {
                     "datetime": timestamp,
                     "author": author,
-                    "message": message
+                    "message": message,
+                    "medias": []
                 }
             else: # Multiline messages
                 if current_msg:
@@ -153,11 +154,15 @@ class WhatsApp(SocialNetwork):
             print(e)
 
     def export_process(self):
-        print("Wait for next updates to get this feature")
+        export_folder = os.path.join("JSON_Chats", self.__class__.__name__)
+        os.makedirs(export_folder, exist_ok=True)
         for chat in tqdm(self.path):
             with zipfile.ZipFile(chat, mode="r") as package:
                 for file in package.infolist():
                     if file.filename.endswith(".txt"):
                         contact = file.filename.replace("WhatsApp Chat with ", "").replace(".txt", "")
                         with package.open(file.filename, mode="r") as msg:
-                            messages = self.__parse_whatsapp_chat(msg.read().decode("utf-8"))
+                            messages = self.__parse_whatsapp_chat(msg.read().decode("utf-8"), True)
+                            with open(f"{export_folder}/{contact}.json", 'w') as f:
+                                json.dump(messages, f)
+        print(f"All chats exported to {os.path.join(os.getcwd(), export_folder)}")
