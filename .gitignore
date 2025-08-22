@@ -212,6 +212,7 @@ __marimo__/
 social_exports/
 Excels/
 Media/
+JSON_Chats/
 *.xlsx
 *.csv
 *.html
