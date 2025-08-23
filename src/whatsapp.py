@@ -154,15 +154,18 @@ class WhatsApp(SocialNetwork):
             print(e)
 
     def export_process(self):
-        export_folder = os.path.join("JSON_Chats", self.__class__.__name__)
-        os.makedirs(export_folder, exist_ok=True)
-        for chat in tqdm(self.path):
-            with zipfile.ZipFile(chat, mode="r") as package:
-                for file in package.infolist():
-                    if file.filename.endswith(".txt"):
-                        contact = file.filename.replace("WhatsApp Chat with ", "").replace(".txt", "")
-                        with package.open(file.filename, mode="r") as msg:
-                            messages = self.__parse_whatsapp_chat(msg.read().decode("utf-8"), True)
-                            with open(f"{export_folder}/{contact}.json", 'w') as f:
-                                json.dump(messages, f)
-        print(f"All chats exported to {os.path.join(os.getcwd(), export_folder)}")
+        try:
+            export_folder = os.path.join("JSON_Chats", self.__class__.__name__)
+            os.makedirs(export_folder, exist_ok=True)
+            for chat in tqdm(self.path):
+                with zipfile.ZipFile(chat, mode="r") as package:
+                    for file in package.infolist():
+                        if file.filename.endswith(".txt"):
+                            contact = file.filename.replace("WhatsApp Chat with ", "").replace(".txt", "")
+                            with package.open(file.filename, mode="r") as msg:
+                                messages = self.__parse_whatsapp_chat(msg.read().decode("utf-8"), True)
+                                with open(f"{export_folder}/{contact}.json", 'w', encoding="utf-8") as f:
+                                    json.dump(messages, f, ensure_ascii=False, indent=4)
+            print(f"All chats exported to {os.path.join(os.getcwd(), export_folder)}")
+        except Exception as e:
+            print(e)

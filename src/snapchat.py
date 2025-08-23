@@ -124,8 +124,32 @@ class SnapChat(SocialNetwork):
             print(e)
 
     def export_process(self):
-        print("Wait for next updates to get this feature")
-        pass
+        try:
+            with zipfile.ZipFile(self.path, mode="r") as package:
+                export_folder = os.path.join("JSON_Chats", self.__class__.__name__)
+                os.makedirs(export_folder, exist_ok=True)
+                with package.open("json/chat_history.json", mode="r") as msg:
+                    sections = json.load(msg)
+                    JSON_messages = []
+                    for contact, messages in tqdm(sections.items()):
+                        for message in messages:
+                            timestamp_ms = int(message["Created(microseconds)"]) // 1000
+                            dt = datetime.fromtimestamp(timestamp_ms)
+                            media = []
+                            if message["Media IDs"] != "":
+                                media.append(message["Media IDs"])
+                            current_msg = {
+                                "datetime": str(dt),
+                                "author": message["From"],
+                                "message": message["Content"],
+                                "medias": media
+                            }
+                            JSON_messages.append(current_msg)
+                        with open(f"{export_folder}/{contact}.json", 'w', encoding="utf-8") as f:
+                            json.dump(JSON_messages, f, ensure_ascii=False, indent=4)
+            print(f"All chats exported to {os.path.join(os.getcwd(), export_folder)}")
+        except Exception as e:
+            print(e)
 
     def medias_process(self):
         try:
