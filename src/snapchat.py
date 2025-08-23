@@ -5,7 +5,7 @@ class SnapChat(SocialNetwork):
     def start_process(self):
         actions = [
             Action("I want to do statistics on messages", self.messages_process),
-            Action("I want to export conversations to a unified JSON format (work in progress)", self.export_process),
+            Action("I want to export conversations to a unified JSON format", self.export_process),
             Action("I want to export the media for my gallery (with their date and author)", self.medias_process),
             Action("I want to display all my journeys on a map", self.map_process)
         ]

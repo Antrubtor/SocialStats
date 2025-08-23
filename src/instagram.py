@@ -124,8 +124,48 @@ class Instagram(SocialNetwork):
             print(e)
 
     def export_process(self):
-        print("Wait for next updates to get this feature")
-        pass
+        try:
+            with zipfile.ZipFile(self.path, mode="r") as package:
+                export_folder = os.path.join("JSON_Chats", self.__class__.__name__)
+                os.makedirs(export_folder, exist_ok=True)
+                msg_files = [file for file in package.infolist()
+                             if file.filename.startswith("your_instagram_activity/messages/inbox")
+                             and file.filename.endswith(".json")
+                             and not file.is_dir()]
+                for file in tqdm(msg_files):
+                    with package.open(file, "r") as msg:
+                        contact = file.filename.replace("your_instagram_activity/messages/inbox/", "").rsplit('/', 1)[0].rsplit('_',1)[0]
+                        chat = json.load(msg)
+                        JSON_messages = []
+
+                        messages = chat["messages"]
+                        for message in tqdm(messages, leave=False):
+                            timestamp_ms = int(message["timestamp_ms"]) // 1000
+                            dt = datetime.fromtimestamp(timestamp_ms)
+                            medias = []
+                            content = ""
+                            if "content" in message:
+                                content = message["content"]
+                            if "videos" in message:
+                                for vid in message["videos"]:
+                                    medias.append(vid["uri"])
+                            if "photos" in message:
+                                for pic in message["photos"]:
+                                    medias.append(pic["uri"])
+                            if "audio_files" in message:
+                                for audio_file in message["audio_files"]:
+                                    medias.append(audio_file["uri"])
+                            current_msg = {
+                                "datetime": str(dt),
+                                "author": message["sender_name"],
+                                "message": content,
+                                "medias": medias
+                            }
+                            JSON_messages.append(current_msg)
+                        with open(f"{export_folder}/{contact}.json", 'w', encoding="utf-8") as f:
+                            json.dump(JSON_messages, f, ensure_ascii=False, indent=4)
+        except Exception as e:
+            print(e)
 
     def __move_file(self, path, timestamp_ms, contact, export_folder, package, send, res):
         ext = os.path.splitext(path)[1]
