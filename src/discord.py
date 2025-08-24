@@ -9,9 +9,9 @@ class Discord(SocialNetwork):
         selected = ask(f"What do you want to do with your {self.__class__.__name__} package?", actions)
         selected.execute()
 
-    def __snowflake_to_date(self, id):
+    def __snowflake_to_date(self, timestamp):
         base_datetime = datetime(1970, 1, 1)
-        convert = int(id) / 4194304 + 1420070400000
+        convert = int(timestamp) / 4194304 + 1420070400000
         delta = timedelta(0, 0, 0, convert)
         return base_datetime + delta
 
@@ -59,6 +59,27 @@ class Discord(SocialNetwork):
         print(f"Your total call time is {total_voice_times} and your longest call was {max_time}.")
         return call_per_user
 
+    def __get_file_and_id(self, package):
+        messages_files_idx = [file for file in package.infolist()
+                              if file.filename.endswith("index.json")
+                              and not file.is_dir()]
+        msg_file_name = "Messages"
+        for msg_file in messages_files_idx: # check if "Messages/" is really the message folder
+            try:
+                with package.open(msg_file, mode="r") as channel_list:
+                    channels_name_id = json.load(channel_list)
+                    for chan_id, contact_name in channels_name_id.items():
+                        if "Direct Message with" in contact_name:
+                            channels_name_id[chan_id] = contact_name.replace("Direct Message with ", "")
+                msg_file_name = msg_file.filename.split("/")[0]
+            except:
+                pass
+        messages_files = [file.filename for file in package.infolist()
+                          if msg_file_name in file.filename
+                          and file.filename.endswith("/messages.json")
+                          and not file.is_dir()]
+        return messages_files, channels_name_id
+
     def messages_stats(self, min_messages):
         try:
             with zipfile.ZipFile(self.path, mode="r") as package:
@@ -76,29 +97,13 @@ class Discord(SocialNetwork):
                             break
                     except:
                         pass
-                messages_files_idx = [file for file in package.infolist()
-                                 if file.filename.endswith("index.json")
-                                 and not file.is_dir()]
-                for msg_file in messages_files_idx:
-                    try:
-                        with package.open(msg_file, mode="r") as channel_list:
-                            channels_name_id = json.load(channel_list)
-                            for chan_id, contact_name in channels_name_id.items():
-                                if "Direct Message with" in contact_name:
-                                    channels_name_id[chan_id] = contact_name.replace("Direct Message with ", "")
-                        msg_file_name = msg_file.filename.split("/")[0]
-                    except:
-                        pass
 
                 messages_per_day = {}  # date : { name : (nb_you, nb_oth), name : (nb_you, nb_oth) }
                 hour_distribution = [0] * 24
                 per_contact_stats = defaultdict(list)
 
                 total_msg, total_chr = 0, 0
-                messages_files = [file.filename for file in package.infolist()
-                               if msg_file_name in file.filename
-                               and file.filename.endswith("/messages.json")
-                               and not file.is_dir()]
+                messages_files, channels_name_id = self.__get_file_and_id(package)
                 for filename in tqdm(messages_files):
                     contact_id = re.search(r"c(\d+)/", filename)
                     if contact_id:
@@ -157,6 +162,34 @@ class Discord(SocialNetwork):
         except Exception as e:
             print(e)
 
+
     def export_process(self):
-        print("Wait for next updates to get this feature")
-        pass
+        try:
+            with zipfile.ZipFile(self.path, mode="r") as package:
+                export_folder = os.path.join("JSON_Chats", self.__class__.__name__)
+                os.makedirs(export_folder, exist_ok=True)
+                messages_files, channels_name_id = self.__get_file_and_id(package)
+                for filename in tqdm(messages_files):
+                    contact_id = re.search(r"c(\d+)/", filename)
+                    if contact_id:
+                        contact_id = contact_id.group(1)
+                    if contact_id not in channels_name_id:
+                        continue
+                    contact = channels_name_id[contact_id].replace("#0", "")
+                    with package.open(filename, mode="r") as msg:
+                        messages = json.load(msg)
+                        JSON_messages = []
+                        for message in tqdm(messages, leave=False):
+                            dt = self.__snowflake_to_date(message["ID"])
+                            current_msg = {
+                                "datetime": str(dt),
+                                "author": "You",
+                                "message": message["Contents"],
+                                "medias": []
+                            }
+                            JSON_messages.append(current_msg)
+                        contact = re.sub(r'[\\/:*?"<>|]', "_", contact).rstrip(" .")
+                        with open(f"{export_folder}/{contact}.json", 'w', encoding="utf-8") as f:
+                            json.dump(JSON_messages, f, ensure_ascii=False, indent=4)
+        except Exception as e:
+            print(e)
