@@ -1,4 +1,8 @@
-import folium
+import io
+import json
+from tqdm import tqdm
+from collections import defaultdict
+
 from src.socialnetwork import *
 
 class SnapChat(SocialNetwork):
@@ -32,7 +36,7 @@ class SnapChat(SocialNetwork):
 
                 with package.open("json/chat_history.json", mode="r") as msg:
                     sections = json.load(msg)
-                    messages_per_day = {} # date : { name : (nb_you, nb_oth), name : (nb_you, nb_oth) }
+                    messages_per_day = {} # date: { name: (nb_you, nb_oth), name : (nb_you, nb_oth) }
                     hour_distribution = [0] * 24
                     per_contact_stats = defaultdict(list)
 
@@ -127,7 +131,7 @@ class SnapChat(SocialNetwork):
         try:
             with zipfile.ZipFile(self.path, mode="r") as package:
                 export_folder = os.path.join("JSON_Chats", self.__class__.__name__)
-                os.makedirs(export_folder, exist_ok=True)
+                create_directory(export_folder)
                 with package.open("json/chat_history.json", mode="r") as msg:
                     sections = json.load(msg)
                     JSON_messages = []
@@ -152,6 +156,8 @@ class SnapChat(SocialNetwork):
             print(e)
 
     def medias_process(self):
+        MP4 = lazy_import("mutagen.mp4").MP4
+        piexif = lazy_import("piexif")
         try:
             with zipfile.ZipFile(self.path, mode="r") as package:
                 with package.open("json/account.json", mode="r") as account:
@@ -168,7 +174,7 @@ class SnapChat(SocialNetwork):
                 with package.open("json/chat_history.json", mode="r") as msg:
                     sections = json.load(msg)
                     export_folder = os.path.join("Media", self.__class__.__name__)
-                    os.makedirs(export_folder, exist_ok=True)
+                    create_directory(export_folder)
                     for contact, messages in tqdm(sections.items()):
                         for message in tqdm(messages):
                             media_id = message.get("Media IDs")
@@ -269,16 +275,22 @@ class SnapChat(SocialNetwork):
         except Exception as e:
             print(e)
 
-    def __parse_coord(self, coord_s):
+    @staticmethod
+    def __parse_coord(coord_s):
         try:
             parts = coord_s.split(",")
             lat_str = parts[0].split("±")[0].strip()
             lon_str = parts[1].split("±")[0].strip()
             return float(lat_str), float(lon_str)
-        except Exception:
+        except Exception as e:
+            print(f"Failed to parse {coord_s}: {e}")
             return None, None
 
     def map_process(self):
+        try:
+            import folium
+        except ImportError:
+            raise RuntimeError("You must install all libraries to use this feature")
         try:
             with zipfile.ZipFile(self.path, mode="r") as package:
                 with package.open("json/location_history.json", mode="r") as loc:

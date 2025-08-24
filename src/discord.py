@@ -1,22 +1,28 @@
+import re
+import json
+from tqdm import tqdm
+from collections import defaultdict
+
 from src.socialnetwork import *
 
 class Discord(SocialNetwork):
     def start_process(self):
         actions = [
             Action("I want to do statistics on messages", self.messages_process),
-            Action("I want to export conversations to a unified JSON format (work in progress)", self.export_process)
+            Action("I want to export conversations to a unified JSON format", self.export_process)
         ]
         selected = ask(f"What do you want to do with your {self.__class__.__name__} package?", actions)
         selected.execute()
 
-    def __snowflake_to_date(self, timestamp):
+    @staticmethod
+    def __snowflake_to_date(timestamp):
         base_datetime = datetime(1970, 1, 1)
         convert = int(timestamp) / 4194304 + 1420070400000
         delta = timedelta(0, 0, 0, convert)
         return base_datetime + delta
 
-
-    def __voice_times_by_user(self, package, channels_name_id):
+    @staticmethod
+    def __voice_times_by_user(package, channels_name_id):
         def parse_discord_timestamp(ts):
             return datetime.fromisoformat(ts.strip('"').replace("Z", "+00:00"))
         call_per_id = defaultdict(tuple)  # {rtc_connection_id: (channel_id, join_voice_channel, leave_voice_channel)}
@@ -44,8 +50,8 @@ class Discord(SocialNetwork):
                             if rtc is not None and rtc != ():
                                 start = rtc[1]
                             call_per_id[event["rtc_connection_id"]] = (event["channel_id"], start, parse_discord_timestamp(event["timestamp"]))
-                    except:
-                        print("Failed to parse event")
+                    except Exception as e:
+                        print(f"Failed to parse event: {e}")
         call_per_user = defaultdict(timedelta)  # { user: time }
         total_voice_times = timedelta(0)
         max_time = timedelta(0)
@@ -59,7 +65,8 @@ class Discord(SocialNetwork):
         print(f"Your total call time is {total_voice_times} and your longest call was {max_time}.")
         return call_per_user
 
-    def __get_file_and_id(self, package):
+    @staticmethod
+    def __get_file_and_id(package):
         messages_files_idx = [file for file in package.infolist()
                               if file.filename.endswith("index.json")
                               and not file.is_dir()]
@@ -98,7 +105,7 @@ class Discord(SocialNetwork):
                     except:
                         pass
 
-                messages_per_day = {}  # date : { name : (nb_you, nb_oth), name : (nb_you, nb_oth) }
+                messages_per_day = {}  # date: { name: (nb_you, nb_oth), name : (nb_you, nb_oth) }
                 hour_distribution = [0] * 24
                 per_contact_stats = defaultdict(list)
 
@@ -167,7 +174,7 @@ class Discord(SocialNetwork):
         try:
             with zipfile.ZipFile(self.path, mode="r") as package:
                 export_folder = os.path.join("JSON_Chats", self.__class__.__name__)
-                os.makedirs(export_folder, exist_ok=True)
+                create_directory(export_folder)
                 messages_files, channels_name_id = self.__get_file_and_id(package)
                 for filename in tqdm(messages_files):
                     contact_id = re.search(r"c(\d+)/", filename)
@@ -179,7 +186,7 @@ class Discord(SocialNetwork):
                     with package.open(filename, mode="r") as msg:
                         messages = json.load(msg)
                         JSON_messages = []
-                        for message in tqdm(messages, leave=False):
+                        for message in messages:
                             dt = self.__snowflake_to_date(message["ID"])
                             current_msg = {
                                 "datetime": str(dt),
@@ -188,7 +195,7 @@ class Discord(SocialNetwork):
                                 "medias": []
                             }
                             JSON_messages.append(current_msg)
-                        contact = re.sub(r'[\\/:*?"<>|]', "_", contact).rstrip(" .")
+                        contact = re.sub(r'[\\/:*?"<>|]', "_", contact).rstrip(" .")    # remove bad char of filename
                         with open(f"{export_folder}/{contact}.json", 'w', encoding="utf-8") as f:
                             json.dump(JSON_messages, f, ensure_ascii=False, indent=4)
         except Exception as e:

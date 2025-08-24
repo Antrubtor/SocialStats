@@ -1,3 +1,8 @@
+import re
+import json
+from tqdm import tqdm
+from collections import defaultdict
+
 from src.socialnetwork import *
 
 class WhatsApp(SocialNetwork):
@@ -12,7 +17,7 @@ class WhatsApp(SocialNetwork):
     def start_process(self):
         actions = [
             Action("I want to do statistics on messages", self.messages_process),
-            Action("I want to export conversations to a unified JSON format (work in progress)", self.export_process)
+            Action("I want to export conversations to a unified JSON format", self.export_process)
         ]
         selected = ask(f"What do you want to do with your {self.__class__.__name__} package?", actions)
         selected.execute()
@@ -156,7 +161,7 @@ class WhatsApp(SocialNetwork):
     def export_process(self):
         try:
             export_folder = os.path.join("JSON_Chats", self.__class__.__name__)
-            os.makedirs(export_folder, exist_ok=True)
+            create_directory(export_folder)
             for chat in tqdm(self.path):
                 with zipfile.ZipFile(chat, mode="r") as package:
                     for file in package.infolist():

@@ -1,56 +1,59 @@
-import re
 import os
-import io
 import sys
-import json
 import time
 import struct
-import piexif
 import zipfile
-from tqdm import tqdm
-from pathlib import Path
-from mutagen.mp4 import MP4
-from InquirerPy import inquirer
-from collections import defaultdict
-from PIL import PngImagePlugin, Image
+import importlib
 from datetime import datetime, timedelta
 
-from openpyxl import Workbook
-from openpyxl.utils import get_column_letter
-from openpyxl.chart import BarChart, PieChart, Reference, LineChart
+_loaded_modules = {}
+
+def lazy_import(name, alias=None):
+    if alias is None:
+        alias = name
+    if alias not in _loaded_modules:
+        _loaded_modules[alias] = importlib.import_module(name)
+    return _loaded_modules[alias]
 
 
 def ask(question, options):
     if sys.stdin.isatty():
-        return inquirer.select(
-            message=question,
-            choices=options
-        ).execute()
-    else:
-        print(question)
-        for i, option in enumerate(options, 1):
-            print(f"{i}. {option}")
-        while True:
-            try:
-                choice = int(input("Choose an option: "))
-                if 1 <= choice <= len(options):
-                    return options[choice - 1]
-            except ValueError:
-                print("Please enter a valid choice.")
+        try:
+            from InquirerPy import inquirer
+            return inquirer.select(
+                message=question,
+                choices=options
+            ).execute()
+        except:
+            pass
+    print(question)
+    for i, option in enumerate(options, 1):
+        print(f"{i}. {option}")
+    while True:
+        try:
+            choice = int(input("Choose an option: "))
+            if 1 <= choice <= len(options):
+                return options[choice - 1]
+        except ValueError:
+            print("Please enter a valid choice.")
+
 
 def ask_number(question):
     if sys.stdin.isatty():
-        return int(inquirer.number(
-            message=question
-        ).execute())
-    else:
-        print(question)
-        while True:
-            try:
-                value = int(input("⮕ "))
-                return value
-            except ValueError:
-                print("Please enter a valid number.")
+        try:
+            from InquirerPy import inquirer
+            return int(inquirer.number(
+                message=question
+            ).execute())
+        except:
+            pass
+    print(question)
+    while True:
+        try:
+            value = int(input("⮕ "))
+            return value
+        except ValueError:
+            print("Please enter a valid number.")
 
 def get_mp4_duration(path, file_path):
     """Directly reads the duration of an MP4 file by parsing the 'mvhd' box."""
@@ -77,8 +80,14 @@ def get_mp4_duration(path, file_path):
         print(f"Error with {file_path} : {e}")
         return 0
 
-
 def generate_excel(per_contact_stats, messages_per_day, hour_distribution, excel_name="analysis.xlsx"):
+    try:
+        from openpyxl import Workbook
+        from openpyxl.utils import get_column_letter
+        from openpyxl.chart import BarChart, PieChart, Reference, LineChart
+    except ImportError:
+        raise RuntimeError("You must install all libraries to use this feature")
+
     base_name = excel_name if excel_name.endswith(".xlsx") else f"{excel_name}.xlsx"
     count = 1
     while os.path.exists(f"Excels/{base_name}"):
@@ -316,6 +325,7 @@ def generate_excel(per_contact_stats, messages_per_day, hour_distribution, excel
     print(f"Excels/{base_name} was successfully created")
 
 def __add_jpeg_metadata(path, dt, contact=None, send=None, res=None):
+    piexif = lazy_import("piexif")
     try:
         exif_dict = piexif.load(path)
         date_str = dt.strftime("%Y:%m:%d %H:%M:%S")
@@ -336,6 +346,8 @@ def __add_jpeg_metadata(path, dt, contact=None, send=None, res=None):
         print(f"[EXIF ERROR] {path}: {e}")
 
 def __add_png_metadata(path, dt, contact=None, send=None, res=None):
+    PngImagePlugin = lazy_import("PIL.PngImagePlugin")
+    Image = lazy_import("PIL.Image")
     try:
         img = Image.open(path)
         meta = PngImagePlugin.PngInfo()
@@ -355,6 +367,7 @@ def __add_png_metadata(path, dt, contact=None, send=None, res=None):
 
 def __add_mp4_metadata(path, dt, contact=None, send=None, res=None):
     try:
+        MP4 = lazy_import("mutagen.mp4").MP4
         mp4 = MP4(path)
         mp4["\xa9day"] = [dt.strftime("%Y-%m-%d")]
         if send and res:
@@ -380,7 +393,6 @@ def add_metadata(path, dt, ext, contact=None, send=None, res=None):
         os.utime(path, (timestamp, timestamp))
     except Exception as e:
         print(f"[DATE ERROR] {path}: {e}")
-
 
 
 def generate_merge_template(file_path="merge_map.csv"):
