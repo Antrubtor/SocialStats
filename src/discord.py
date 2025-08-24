@@ -1,5 +1,3 @@
-import re
-import json
 from tqdm import tqdm
 from collections import defaultdict
 
@@ -9,7 +7,8 @@ class Discord(SocialNetwork):
     def start_process(self):
         actions = [
             Action("I want to do statistics on messages", self.messages_process),
-            Action("I want to export conversations to a unified JSON format", self.export_process)
+            Action("I want to export conversations to a unified JSON format", self.export_process),
+            Action("I want to search for messages with a regex", self.search_process)
         ]
         selected = ask(f"What do you want to do with your {self.__class__.__name__} package?", actions)
         selected.execute()
@@ -173,8 +172,7 @@ class Discord(SocialNetwork):
     def export_process(self):
         try:
             with zipfile.ZipFile(self.path, mode="r") as package:
-                export_folder = os.path.join("JSON_Chats", self.__class__.__name__)
-                create_directory(export_folder)
+                export_folder = self.export_JSON_folder
                 messages_files, channels_name_id = self.__get_file_and_id(package)
                 for filename in tqdm(messages_files):
                     contact_id = re.search(r"c(\d+)/", filename)

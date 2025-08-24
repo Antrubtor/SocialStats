@@ -1,5 +1,3 @@
-import re
-import json
 from tqdm import tqdm
 from collections import defaultdict
 
@@ -17,13 +15,15 @@ class WhatsApp(SocialNetwork):
     def start_process(self):
         actions = [
             Action("I want to do statistics on messages", self.messages_process),
-            Action("I want to export conversations to a unified JSON format", self.export_process)
+            Action("I want to export conversations to a unified JSON format", self.export_process),
+            Action("I want to search for messages with a regex", self.search_process)
         ]
         selected = ask(f"What do you want to do with your {self.__class__.__name__} package?", actions)
         selected.execute()
 
 
-    def __parse_whatsapp_chat(self, text, str_timestamp=False):
+    @staticmethod
+    def __parse_whatsapp_chat(text, str_timestamp=False):
         msg_pattern = re.compile(r"^(\d{1,2}/\d{1,2}/\d{2,4}), (\d{2}:\d{2}) - ")
         messages = []
         current_msg = None
@@ -71,7 +71,7 @@ class WhatsApp(SocialNetwork):
     def messages_stats(self, min_messages):
         try:
             # min_messages = ask_number("Minimum number of messages per contact (0 for no limit set)?")
-            messages_per_day = {}  # date : { name : (nb_you, nb_oth), name : (nb_you, nb_oth) }
+            messages_per_day = {}  # date: { name: (nb_you, nb_oth), name : (nb_you, nb_oth) }
             hour_distribution = [0] * 24
             per_contact_stats = defaultdict(list)
 
@@ -160,8 +160,7 @@ class WhatsApp(SocialNetwork):
 
     def export_process(self):
         try:
-            export_folder = os.path.join("JSON_Chats", self.__class__.__name__)
-            create_directory(export_folder)
+            export_folder = self.export_JSON_folder
             for chat in tqdm(self.path):
                 with zipfile.ZipFile(chat, mode="r") as package:
                     for file in package.infolist():

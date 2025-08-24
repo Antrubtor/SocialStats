@@ -1,4 +1,3 @@
-import json
 from tqdm import tqdm
 from collections import defaultdict
 
@@ -9,6 +8,7 @@ class Instagram(SocialNetwork):
         actions = [
             Action("I want to do statistics on messages", self.messages_process),
             Action("I want to export conversations to a unified JSON format", self.export_process),
+            Action("I want to search for messages with a regex", self.search_process),
             Action("I want to export the media for my gallery (with their date and author)", self.medias_process)
         ]
         selected = ask(f"What do you want to do with your {self.__class__.__name__} package?", actions)
@@ -130,8 +130,7 @@ class Instagram(SocialNetwork):
     def export_process(self):
         try:
             with zipfile.ZipFile(self.path, mode="r") as package:
-                export_folder = os.path.join("JSON_Chats", self.__class__.__name__)
-                create_directory(export_folder)
+                export_folder = self.export_JSON_folder
                 msg_files = [file for file in package.infolist()
                              if file.filename.startswith("your_instagram_activity/messages/inbox")
                              and file.filename.endswith(".json")
@@ -194,8 +193,7 @@ class Instagram(SocialNetwork):
     def medias_process(self):
         try:
             with zipfile.ZipFile(self.path, mode="r") as package:
-                export_folder = os.path.join("Media", self.__class__.__name__)
-                create_directory(export_folder)
+                export_folder = self.export_MEDIA_folder
                 with package.open("personal_information/personal_information/personal_information.json", mode="r") as account:
                     sections = json.load(account)
                     pseudo = sections["profile_user"][0]["string_map_data"]["Name"]["value"]
