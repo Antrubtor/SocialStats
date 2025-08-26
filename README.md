@@ -1,19 +1,23 @@
 # 📊 SocialStats
 
-**SocialStats** is a tool that analyzes your personal data from various social networks to provide **clear and visual statistics** about your online interactions.
-It aggregates, merges, and visualizes advanced stats (response delay, activity over time, call durations, etc.) into **Excel graphs** that are easy to read and understand.
+**SocialStats** analyzes your personal data from multiple social networks and turns it into **clean Excel dashboards**: response delays, messaging activity over time, voice call durations, voice message time, and more.
+It also supports **exporting media (Instagram & Snapchat)**, **standardized JSON exports**, **regex-based search**, and **location mapping for Snapchat**.
 
 ---
 
 ## 🧩 Features
 
-* 📅 See how many messages you sent and received over time
-* ⏱️ Measure your average response delay and your contacts’ (Instagram, Snapchat, WhatsApp)
-* 🕐 View your activity by **hour**, **day**, **week**, **month**, or **year**
-* 📞 Get your total voice call time (Discord only)
-* 🎙️ See your total voice message time (Instagram, Snapchat)
-* 📊 Compare how much you interact with different people
-* 📦 Merge all your networks into a **single unified Excel file**
+* 📅 See how many messages you sent and received over time  
+* ⏱️ Average response delays (you vs. contact) — **Instagram, Snapchat, WhatsApp**
+* 🕐 View your activity by **hour**, **day**, **week**, **month**, or **year**  
+* 📞 Get your total voice call time (Discord only)  
+* 🎙️ See your total voice message time (Instagram, Snapchat)  
+* 📊 Compare how much you interact with different people  
+* 🔗 **Cross-network merge** into a single Excel (Discord/Instagram/Snapchat/WhatsApp)
+* 🖼️ **Media export** (Instagram & Snapchat) — EXIF/metadata timestamps are normalized so **Android/iOS galleries sort them correctly in time**
+* 🧾 **JSON export** of all messages
+* 🔎 **Regex search** across all messages of a given social network
+* 🗺️ **Snapchat map export (HTML)** with all recorded location points
 
 > [!TIP]
 > Don’t forget to check the **"Global"** sheet in the Excel file — it contains more specific and aggregated information.
@@ -88,18 +92,7 @@ python3 main.py
 
 ---
 
-## 🧪 JSON Export *(in development)*
 
-Standard export of all your conversations in a **clean and unified JSON format**.
-Useful for re-importing, cross-platform comparisons, or visualizations.
-
----
-
-## 🖼️ Media Export *(in development)*
-
-Automatically export all **images** and **videos** from supported platforms into a single folder.
-
----
 
 ## 📷 Example outputs
 
@@ -116,9 +109,34 @@ Automatically export all **images** and **videos** from supported platforms into
 
 ---
 
+## 🧪 JSON Export
+
+Standard export of all your conversations in a **clean and unified JSON format**.
+Useful for re-importing, cross-platform comparisons, or external analysis.
+
+---
+
+## 🖼️ Media Export
+
+Automatically export all **images** and **videos** from **Instagram** and **Snapchat** into a single organized folder.
+Files are renamed with date + sender, and their metadata is updated so they integrate seamlessly into Android and iOS galleries.
+---
+
+## 🔍 Regex Search
+
+Run **regex-based** queries across all messages of a given platform to quickly find patterns (keywords, URLs, mentions, etc.).
+Great for investigations and advanced filtering.
+---
+
+## 🗺️ Snapchat Location Map (HTML)
+
+Generate an **interactive HTML map** of all geolocations saved by Snapchat.
+Open it in your browser to explore your activity on a map.
+---
+
 ## 📄 License
 
 This project is licensed under the **MIT License**.
-Feel free to fork or reuse — just make sure to **credit [Antrubtor](https://github.com/Antrubtor)**.
+Forks and reuse are welcome — please **credit [Antrubtor](https://github.com/Antrubtor)**.
 
 ---

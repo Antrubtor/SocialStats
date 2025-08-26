@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from src.utils import *
 from src.discord import Discord
 from src.instagram import Instagram
@@ -31,9 +33,9 @@ def set_all_path():
     for name, cls in txt_networks:
         folder = Path(f"social_exports/{name}")
         if name == "WhatsApp":
-            WA = set_path_whatsapp(folder, WhatsApp)
-            if WA is not None:
-                s_n.append(WA)
+            whatsapp_paths = set_path_whatsapp(folder, WhatsApp)
+            if whatsapp_paths is not None:
+                s_n.append(whatsapp_paths)
             continue
         for path in folder.glob(f"*.zip"):
             s_n.append(cls(path))

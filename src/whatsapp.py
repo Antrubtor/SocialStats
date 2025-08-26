@@ -1,4 +1,5 @@
-import datetime
+from tqdm import tqdm
+from collections import defaultdict
 
 from src.socialnetwork import *
 
@@ -14,13 +15,15 @@ class WhatsApp(SocialNetwork):
     def start_process(self):
         actions = [
             Action("I want to do statistics on messages", self.messages_process),
-            Action("I want to export conversations to a unified JSON format (work in progress)", self.export_process)
+            Action("I want to export conversations to a unified JSON format", self.export_process),
+            Action("I want to search for messages with a regex", self.search_process)
         ]
         selected = ask(f"What do you want to do with your {self.__class__.__name__} package?", actions)
         selected.execute()
 
 
-    def __parse_whatsapp_chat(self, text):
+    @staticmethod
+    def __parse_whatsapp_chat(text, str_timestamp=False):
         msg_pattern = re.compile(r"^(\d{1,2}/\d{1,2}/\d{2,4}), (\d{2}:\d{2}) - ")
         messages = []
         current_msg = None
@@ -48,11 +51,14 @@ class WhatsApp(SocialNetwork):
 
                 if current_msg:
                     messages.append(current_msg)
+                if str_timestamp and timestamp:
+                    timestamp = str(timestamp)
 
                 current_msg = {
                     "datetime": timestamp,
                     "author": author,
-                    "message": message
+                    "message": message,
+                    "medias": []
                 }
             else: # Multiline messages
                 if current_msg:
@@ -65,7 +71,7 @@ class WhatsApp(SocialNetwork):
     def messages_stats(self, min_messages):
         try:
             # min_messages = ask_number("Minimum number of messages per contact (0 for no limit set)?")
-            messages_per_day = {}  # date : { name : (nb_you, nb_oth), name : (nb_you, nb_oth) }
+            messages_per_day = {}  # date: { name: (nb_you, nb_oth), name : (nb_you, nb_oth) }
             hour_distribution = [0] * 24
             per_contact_stats = defaultdict(list)
 
@@ -153,5 +159,17 @@ class WhatsApp(SocialNetwork):
             print(e)
 
     def export_process(self):
-        print("Wait for next updates to get this feature")
-        pass
+        try:
+            export_folder = self.export_JSON_folder
+            for chat in tqdm(self.path):
+                with zipfile.ZipFile(chat, mode="r") as package:
+                    for file in package.infolist():
+                        if file.filename.endswith(".txt"):
+                            contact = file.filename.replace("WhatsApp Chat with ", "").replace(".txt", "")
+                            with package.open(file.filename, mode="r") as msg:
+                                messages = self.__parse_whatsapp_chat(msg.read().decode("utf-8"), True)
+                                with open(f"{export_folder}/{contact}.json", 'w', encoding="utf-8") as f:
+                                    json.dump(messages, f, ensure_ascii=False, indent=4)
+            print(f"All chats exported to {os.path.join(os.getcwd(), export_folder)}")
+        except Exception as e:
+            print(e)

@@ -1,10 +1,14 @@
+from tqdm import tqdm
+from collections import defaultdict
+
 from src.socialnetwork import *
 
 class Instagram(SocialNetwork):
     def start_process(self):
         actions = [
             Action("I want to do statistics on messages", self.messages_process),
-            Action("I want to export conversations to a unified JSON format (work in progress)", self.export_process),
+            Action("I want to export conversations to a unified JSON format", self.export_process),
+            Action("I want to search for messages with a regex", self.search_process),
             Action("I want to export the media for my gallery (with their date and author)", self.medias_process)
         ]
         selected = ask(f"What do you want to do with your {self.__class__.__name__} package?", actions)
@@ -22,7 +26,7 @@ class Instagram(SocialNetwork):
                     creation_date = datetime.fromtimestamp(sections["account_history_registration_info"][0]["string_map_data"]["Time"]["timestamp"])
                 print(f"Your {self.__class__.__name__} account named {pseudo}, created on {creation_date}, was found")
 
-                messages_per_day = {}  # date : { name : (nb_you, nb_oth), name : (nb_you, nb_oth) }
+                messages_per_day = {}  # date: { name: (nb_you, nb_oth), name : (nb_you, nb_oth) }
                 hour_distribution = [0] * 24
                 per_contact_stats = defaultdict(list)
 
@@ -124,10 +128,50 @@ class Instagram(SocialNetwork):
             print(e)
 
     def export_process(self):
-        print("Wait for next updates to get this feature")
-        pass
+        try:
+            with zipfile.ZipFile(self.path, mode="r") as package:
+                export_folder = self.export_JSON_folder
+                msg_files = [file for file in package.infolist()
+                             if file.filename.startswith("your_instagram_activity/messages/inbox")
+                             and file.filename.endswith(".json")
+                             and not file.is_dir()]
+                for file in tqdm(msg_files):
+                    with package.open(file, "r") as msg:
+                        contact = file.filename.replace("your_instagram_activity/messages/inbox/", "").rsplit('/', 1)[0].rsplit('_',1)[0]
+                        chat = json.load(msg)
+                        JSON_messages = []
 
-    def __move_file(self, path, timestamp_ms, contact, export_folder, package, send, res):
+                        messages = chat["messages"]
+                        for message in messages:
+                            timestamp_ms = int(message["timestamp_ms"]) // 1000
+                            dt = datetime.fromtimestamp(timestamp_ms)
+                            medias = []
+                            content = ""
+                            if "content" in message:
+                                content = message["content"]
+                            if "videos" in message:
+                                for vid in message["videos"]:
+                                    medias.append(vid["uri"])
+                            if "photos" in message:
+                                for pic in message["photos"]:
+                                    medias.append(pic["uri"])
+                            if "audio_files" in message:
+                                for audio_file in message["audio_files"]:
+                                    medias.append(audio_file["uri"])
+                            current_msg = {
+                                "datetime": str(dt),
+                                "author": message["sender_name"],
+                                "message": content,
+                                "medias": medias
+                            }
+                            JSON_messages.append(current_msg)
+                        with open(f"{export_folder}/{contact}.json", 'w', encoding="utf-8") as f:
+                            json.dump(JSON_messages, f, ensure_ascii=False, indent=4)
+        except Exception as e:
+            print(e)
+
+    @staticmethod
+    def __move_file(path, timestamp_ms, contact, export_folder, package, send, res):
         ext = os.path.splitext(path)[1]
         if ext == "":
             ext = ".jpg"
@@ -149,12 +193,11 @@ class Instagram(SocialNetwork):
     def medias_process(self):
         try:
             with zipfile.ZipFile(self.path, mode="r") as package:
+                export_folder = self.export_MEDIA_folder
                 with package.open("personal_information/personal_information/personal_information.json", mode="r") as account:
                     sections = json.load(account)
                     pseudo = sections["profile_user"][0]["string_map_data"]["Name"]["value"]
                 nb = 0
-                export_folder = os.path.join("Media", self.__class__.__name__)
-                os.makedirs(export_folder, exist_ok=True)
                 msg_files = [file for file in package.infolist()
                              if file.filename.startswith("your_instagram_activity/messages/inbox")
                              and file.filename.endswith(".json")

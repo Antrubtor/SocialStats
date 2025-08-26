@@ -1,11 +1,15 @@
-import folium
+import io
+from tqdm import tqdm
+from collections import defaultdict
+
 from src.socialnetwork import *
 
 class SnapChat(SocialNetwork):
     def start_process(self):
         actions = [
             Action("I want to do statistics on messages", self.messages_process),
-            Action("I want to export conversations to a unified JSON format (work in progress)", self.export_process),
+            Action("I want to export conversations to a unified JSON format", self.export_process),
+            Action("I want to search for messages with a regex", self.search_process),
             Action("I want to export the media for my gallery (with their date and author)", self.medias_process),
             Action("I want to display all my journeys on a map", self.map_process)
         ]
@@ -32,7 +36,7 @@ class SnapChat(SocialNetwork):
 
                 with package.open("json/chat_history.json", mode="r") as msg:
                     sections = json.load(msg)
-                    messages_per_day = {} # date : { name : (nb_you, nb_oth), name : (nb_you, nb_oth) }
+                    messages_per_day = {} # date: { name: (nb_you, nb_oth), name : (nb_you, nb_oth) }
                     hour_distribution = [0] * 24
                     per_contact_stats = defaultdict(list)
 
@@ -124,12 +128,35 @@ class SnapChat(SocialNetwork):
             print(e)
 
     def export_process(self):
-        print("Wait for next updates to get this feature")
-        pass
-
-
+        try:
+            with zipfile.ZipFile(self.path, mode="r") as package:
+                export_folder = self.export_JSON_folder
+                with package.open("json/chat_history.json", mode="r") as msg:
+                    sections = json.load(msg)
+                    for contact, messages in tqdm(sections.items()):
+                        JSON_messages = []
+                        for message in messages:
+                            timestamp_ms = int(message["Created(microseconds)"]) // 1000
+                            dt = datetime.fromtimestamp(timestamp_ms)
+                            media = []
+                            if message["Media IDs"] != "":
+                                media.append(message["Media IDs"])
+                            current_msg = {
+                                "datetime": str(dt),
+                                "author": message["From"],
+                                "message": message["Content"],
+                                "medias": media
+                            }
+                            JSON_messages.append(current_msg)
+                        with open(f"{export_folder}/{contact}.json", 'w', encoding="utf-8") as f:
+                            json.dump(JSON_messages, f, ensure_ascii=False, indent=4)
+            print(f"All chats exported to {os.path.join(os.getcwd(), export_folder)}")
+        except Exception as e:
+            print(e)
 
     def medias_process(self):
+        MP4 = lazy_import("mutagen.mp4").MP4
+        piexif = lazy_import("piexif")
         try:
             with zipfile.ZipFile(self.path, mode="r") as package:
                 with package.open("json/account.json", mode="r") as account:
@@ -145,8 +172,7 @@ class SnapChat(SocialNetwork):
                 nb = 0
                 with package.open("json/chat_history.json", mode="r") as msg:
                     sections = json.load(msg)
-                    export_folder = os.path.join("Media", self.__class__.__name__)
-                    os.makedirs(export_folder, exist_ok=True)
+                    export_folder = self.export_MEDIA_folder
                     for contact, messages in tqdm(sections.items()):
                         for message in tqdm(messages):
                             media_id = message.get("Media IDs")
@@ -247,16 +273,22 @@ class SnapChat(SocialNetwork):
         except Exception as e:
             print(e)
 
-    def __parse_coord(self, coord_s):
+    @staticmethod
+    def __parse_coord(coord_s):
         try:
             parts = coord_s.split(",")
             lat_str = parts[0].split("±")[0].strip()
             lon_str = parts[1].split("±")[0].strip()
             return float(lat_str), float(lon_str)
-        except Exception:
+        except Exception as e:
+            print(f"Failed to parse {coord_s}: {e}")
             return None, None
 
     def map_process(self):
+        try:
+            import folium
+        except ImportError:
+            raise RuntimeError("You must install all libraries to use this feature")
         try:
             with zipfile.ZipFile(self.path, mode="r") as package:
                 with package.open("json/location_history.json", mode="r") as loc:
