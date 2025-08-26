@@ -119,7 +119,7 @@ Useful for re-importing, cross-platform comparisons, or external analysis.
 ## 🖼️ Media Export
 
 Automatically export all **images** and **videos** from **Instagram** and **Snapchat** into a single organized folder.
-Files are renamed with date + sender, and their metadata is updated so they integrate seamlessly into Android and iOS galleries.
+Files are renamed with date & sender, and their metadata is updated so they integrate seamlessly into Android and iOS galleries.
 ---
 
 ## 🔍 Regex Search
