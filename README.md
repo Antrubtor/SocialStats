@@ -92,6 +92,23 @@ python3 main.py
 
 ---
 
+
+
+## 📷 Example outputs
+
+<table>
+  <tr>
+    <td><img src=".ressources/cumul_per_day.png" width="400"/></td>
+    <td><img src=".ressources/answer_delay.png" width="400"/></td>
+  </tr>
+  <tr>
+    <td><img src=".ressources/msg_per_hour.png" width="400"/></td>
+    <td><img src=".ressources/proportion_contact.png" width="400"/></td>
+  </tr>
+</table>
+
+---
+
 ## 🧪 JSON Export
 
 Standard export of all your conversations in a **clean and unified JSON format**.
@@ -115,21 +132,6 @@ Great for investigations and advanced filtering.
 
 Generate an **interactive HTML map** of all geolocations saved by Snapchat.
 Open it in your browser to explore your activity on a map.
----
-
-## 📷 Example outputs
-
-<table>
-  <tr>
-    <td><img src=".ressources/cumul_per_day.png" width="400"/></td>
-    <td><img src=".ressources/answer_delay.png" width="400"/></td>
-  </tr>
-  <tr>
-    <td><img src=".ressources/msg_per_hour.png" width="400"/></td>
-    <td><img src=".ressources/proportion_contact.png" width="400"/></td>
-  </tr>
-</table>
-
 ---
 
 ## 📄 License
