@@ -119,19 +119,22 @@ Useful for re-importing, cross-platform comparisons, or external analysis.
 ## 🖼️ Media Export
 
 Automatically export all **images** and **videos** from **Instagram** and **Snapchat** into a single organized folder.
-Files are renamed with date & sender, and their metadata is updated so they integrate seamlessly into Android and iOS galleries.
+Files are renamed with date + sender, and their metadata is updated so they integrate seamlessly into Android and iOS galleries.
+
 ---
 
 ## 🔍 Regex Search
 
 Run **regex-based** queries across all messages of a given platform to quickly find patterns (keywords, URLs, mentions, etc.).
 Great for investigations and advanced filtering.
+
 ---
 
 ## 🗺️ Snapchat Location Map (HTML)
 
 Generate an **interactive HTML map** of all geolocations saved by Snapchat.
 Open it in your browser to explore your activity on a map.
+
 ---
 
 ## 📄 License
