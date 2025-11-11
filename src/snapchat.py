@@ -142,38 +142,42 @@ class SnapChat(SocialNetwork):
                         return per_contact_stats, messages_per_day, hour_distribution, f"{self.__class__.__name__}_{pseudo}"
         except Exception as e:
             print(e)
+            return {}, {}, [], f"{self.__class__.__name__}_unknown"
 
     def export_process(self):
         try:
-            with zipfile.ZipFile(self.path, mode="r") as package:
-                export_folder = self.export_JSON_folder
-                with package.open("json/chat_history.json", mode="r") as msg:
-                    sections = json.load(msg)
-                    for contact, messages in tqdm(sections.items()):
-                        JSON_messages = []
-                        for message in messages:
-                            timestamp_ms = int(message["Created(microseconds)"]) // 1000
-                            dt = datetime.fromtimestamp(timestamp_ms)
-                            media = []
-                            if message["Media IDs"] != "":
-                                media.append(message["Media IDs"])
-                            current_msg = {
-                                "datetime": str(dt),
-                                "author": message["From"],
-                                "message": message["Content"],
-                                "medias": media
-                            }
-                            JSON_messages.append(current_msg)
-                        with open(f"{export_folder}/{contact}.json", 'w', encoding="utf-8") as f:
-                            json.dump(JSON_messages, f, ensure_ascii=False, indent=4)
-            print(f"All chats exported to {os.path.join(os.getcwd(), export_folder)}")
+            for path in self.path:
+                with zipfile.ZipFile(path, mode="r") as package:
+                    if not "json/chat_history.json" in package.namelist():
+                        continue
+                    export_folder = self.export_JSON_folder
+                    with package.open("json/chat_history.json", mode="r") as msg:
+                        sections = json.load(msg)
+                        for contact, messages in tqdm(sections.items()):
+                            JSON_messages = []
+                            for message in messages:
+                                timestamp_ms = int(message["Created(microseconds)"]) // 1000
+                                dt = datetime.fromtimestamp(timestamp_ms)
+                                media = []
+                                if message["Media IDs"] != "":
+                                    media.append(message["Media IDs"])
+                                current_msg = {
+                                    "datetime": str(dt),
+                                    "author": message["From"],
+                                    "message": message["Content"],
+                                    "medias": media
+                                }
+                                JSON_messages.append(current_msg)
+                            with open(f"{export_folder}/{contact}.json", 'w', encoding="utf-8") as f:
+                                json.dump(JSON_messages, f, ensure_ascii=False, indent=4)
+                print(f"All chats exported to {os.path.join(os.getcwd(), export_folder)}")
         except Exception as e:
             print(e)
 
     def medias_process(self):
-            MP4 = lazy_import("mutagen.mp4").MP4
-            piexif = lazy_import("piexif")
-        # try:
+        MP4 = lazy_import("mutagen.mp4").MP4
+        piexif = lazy_import("piexif")
+        try:
             media_ids_files = {}
             pseudo = None
             for path in self.path:
@@ -296,8 +300,8 @@ class SnapChat(SocialNetwork):
                     add_metadata(out_path, dt, ext)
                     nb += 1
                 print(f"\n{nb} media exported in {os.path.join(os.getcwd(), export_folder)}")
-        # except Exception as e:
-        #     print(e)
+        except Exception as e:
+            print(e)
 
     @staticmethod
     def __parse_coord(coord_s):

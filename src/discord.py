@@ -155,8 +155,8 @@ class Discord(SocialNetwork):
                         per_contact_stats["Characters sent by you"].append(char_you)
                         per_contact_stats["Characters sent by your contact"].append(char_oth)
                 print(f"\nLoaded {total_msg} messages in total with {total_chr} characters")
-                # call_per_user = {}    # TODO: remove
-                call_per_user = self.__voice_times_by_user(package, channels_name_id)
+                call_per_user = {}    # TODO: remove
+                # call_per_user = self.__voice_times_by_user(package, channels_name_id)
                 for user in per_contact_stats["Contact"]:
                     if user not in call_per_user:
                         per_contact_stats["Call time"].append("0h0m")
@@ -167,6 +167,7 @@ class Discord(SocialNetwork):
                 return per_contact_stats, messages_per_day, hour_distribution, f"{self.__class__.__name__}_{pseudo}"
         except Exception as e:
             print(e)
+            return {}, {}, [], f"{self.__class__.__name__}_unknown"
 
 
     def export_process(self):

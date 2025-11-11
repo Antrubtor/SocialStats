@@ -83,8 +83,8 @@ class Instagram(SocialNetwork):
                             # Voice message time
                             if "audio_files" in message:
                                 for audio_file in message["audio_files"]:
-                                    duration = get_mp4_duration(self.path, audio_file["uri"])
-                                    # duration = 0    # TODO: remove
+                                    # duration = get_mp4_duration(self.path, audio_file["uri"])
+                                    duration = 0    # TODO: remove
                                     if is_you:
                                         voice_you += duration
                                     else:
@@ -126,6 +126,7 @@ class Instagram(SocialNetwork):
                 return per_contact_stats, messages_per_day, hour_distribution, f"{self.__class__.__name__}_{pseudo}"
         except Exception as e:
             print(e)
+            return {}, {}, [], f"{self.__class__.__name__}_unknown"
 
     def export_process(self):
         try:
