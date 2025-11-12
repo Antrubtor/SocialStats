@@ -2,6 +2,7 @@ from tqdm import tqdm
 from collections import defaultdict
 
 from src.socialnetwork import *
+from src.settings import SKIP_AUDIO_PROCESS
 
 class Instagram(SocialNetwork):
     def start_process(self):
@@ -83,8 +84,10 @@ class Instagram(SocialNetwork):
                             # Voice message time
                             if "audio_files" in message:
                                 for audio_file in message["audio_files"]:
-                                    # duration = get_mp4_duration(self.path, audio_file["uri"])
-                                    duration = 0    # TODO: remove
+                                    if SKIP_AUDIO_PROCESS:
+                                        duration = 0
+                                    else:
+                                        duration = get_mp4_duration(self.path, audio_file["uri"])
                                     if is_you:
                                         voice_you += duration
                                     else:

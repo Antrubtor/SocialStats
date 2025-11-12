@@ -81,7 +81,12 @@ python3 main.py
 ### 🟡 Snapchat *(can take up to 1 day)*
 
 1. Go to **Settings > My Data**
-2. Select everything, especially **Export JSON files**
+2. Select everything, especially **Export JSON files**, if the zip file doesn't contain everything, select at least:
+   * Export JSON Files
+   * User Information
+   * Chat History
+   * Ranking And Location
+   * Export Chat Media
 3. Choose **All time** as period
 
 ### 🟢 WhatsApp *(instant)*

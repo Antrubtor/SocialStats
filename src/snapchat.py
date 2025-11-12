@@ -3,6 +3,7 @@ from tqdm import tqdm
 from collections import defaultdict
 
 from src.socialnetwork import *
+from src.settings import SKIP_AUDIO_PROCESS
 
 class SnapChat(SocialNetwork):
     def __str__(self):
@@ -36,13 +37,13 @@ class SnapChat(SocialNetwork):
                             pseudo = sections["Basic Information"]["Username"]
                             creation_date = sections["Basic Information"]["Creation Date"]
                             print(f"Your {self.__class__.__name__} account named {pseudo}, created on {creation_date}, was found")
-                    for filename in package.namelist():
-                        if filename.startswith("chat_media/") and "_" in filename:
-                            try:
-                                media_ids_files[filename.split("_")[2].split(".")[0]] = (str(path), filename)
-                            except IndexError:
-                                continue
-            # media_ids_files = {}    # TODO: remove
+                    if not SKIP_AUDIO_PROCESS:
+                        for filename in package.namelist():
+                            if filename.startswith("chat_media/") and "_" in filename:
+                                try:
+                                    media_ids_files[filename.split("_")[2].split(".")[0]] = (str(path), filename)
+                                except IndexError:
+                                    continue
             if not pseudo:
                 pseudo = str(input("Could not find your username. Please enter it manually: "))
 
@@ -218,6 +219,29 @@ class SnapChat(SocialNetwork):
                                     else:
                                         media_ids_files[media_id]["send"] = contact
                                         media_ids_files[media_id]["res"] = pseudo
+                    memories_files = [file for file in package.infolist()
+                                      if file.filename.startswith("memories")
+                                      and (file.filename.endswith(".mp4") or file.filename.endswith(
+                            ".jpg") or file.filename.endswith(".png") or file.filename.endswith(".webp"))
+                                      and not file.is_dir()]
+                    for memory in tqdm(memories_files, leave=False):
+                        with package.open(memory.filename) as source_file:
+                            data = source_file.read()
+                        file_name = memory.filename.split("/")[-1]
+                        ext = os.path.splitext(file_name)[1].lower()
+                        dt = datetime.strptime(file_name.split("_")[0], "%Y-%m-%d")
+                        counter = 1
+                        base_name = dt.strftime("%Y-%m-%d %H.%M.%S")
+                        new_filename = f"{base_name}{ext}"
+                        out_path = os.path.join(export_folder, new_filename)
+                        while os.path.exists(out_path):
+                            new_filename = f"{base_name}_{counter}{ext}"
+                            out_path = os.path.join(export_folder, new_filename)
+                            counter += 1
+                        with open(out_path, "wb") as target_file:
+                            target_file.write(data)
+                        add_metadata(out_path, dt, ext)
+                        nb += 1
                 for _, infos in tqdm(media_ids_files.items(), leave=False):
                     path = infos["filename"]
                     package_path = infos["package_path"]
@@ -276,29 +300,6 @@ class SnapChat(SocialNetwork):
                                 else:
                                     add_metadata(out_path, dt, ext)
                         nb += 1
-
-                memories_files = [file for file in package.infolist()
-                             if file.filename.startswith("memories")
-                             and (file.filename.endswith(".mp4") or file.filename.endswith(".jpg") or file.filename.endswith(".png") or file.filename.endswith(".webp"))
-                             and not file.is_dir()]
-                for memory in tqdm(memories_files, leave=False):
-                    with package.open(memory.filename) as source_file:
-                        data = source_file.read()
-                    file_name = memory.filename.split("/")[-1]
-                    ext = os.path.splitext(file_name)[1].lower()
-                    dt = datetime.strptime(file_name.split("_")[0], "%Y-%m-%d")
-                    counter = 1
-                    base_name = dt.strftime("%Y-%m-%d %H.%M.%S")
-                    new_filename = f"{base_name}{ext}"
-                    out_path = os.path.join(export_folder, new_filename)
-                    while os.path.exists(out_path):
-                        new_filename = f"{base_name}_{counter}{ext}"
-                        out_path = os.path.join(export_folder, new_filename)
-                        counter += 1
-                    with open(out_path, "wb") as target_file:
-                        target_file.write(data)
-                    add_metadata(out_path, dt, ext)
-                    nb += 1
                 print(f"\n{nb} media exported in {os.path.join(os.getcwd(), export_folder)}")
         except Exception as e:
             print(e)
