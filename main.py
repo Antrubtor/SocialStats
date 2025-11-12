@@ -16,7 +16,8 @@ def create_export_directories():
     for s in txt_networks:
         create_directory(f"social_exports/{s[0]}")
 
-def set_path_whatsapp(folder, cls):
+def set_path_multiple(folder, cls):
+    # For social networks with multiple zip files for exports
     paths = []
     for path in folder.glob(f"*.zip"):
         paths.append(path)
@@ -32,10 +33,10 @@ def set_all_path():
     s_n = []
     for name, cls in txt_networks:
         folder = Path(f"social_exports/{name}")
-        if name == "WhatsApp":
-            whatsapp_paths = set_path_whatsapp(folder, WhatsApp)
-            if whatsapp_paths is not None:
-                s_n.append(whatsapp_paths)
+        if name == "WhatsApp" or name == "SnapChat":
+            multiple_paths = set_path_multiple(folder, WhatsApp if name == "WhatsApp" else SnapChat)
+            if multiple_paths is not None:
+                s_n.append(multiple_paths)
             continue
         for path in folder.glob(f"*.zip"):
             s_n.append(cls(path))

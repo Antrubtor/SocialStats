@@ -157,6 +157,7 @@ class WhatsApp(SocialNetwork):
             return per_contact_stats, messages_per_day, hour_distribution, f"{self.__class__.__name__}_{pseudo}"
         except Exception as e:
             print(e)
+            return {}, {}, [], f"{self.__class__.__name__}_unknown"
 
     def export_process(self):
         try:
