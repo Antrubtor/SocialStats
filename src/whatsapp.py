@@ -33,7 +33,7 @@ class WhatsApp(SocialNetwork):
                 match = msg_pattern.match(line)
                 date_str = f"{match.group(1)}, {match.group(2)}" # parse date
 
-                for fmt in ["%d/%m/%Y, %H:%M", "%d/%m/%y, %H:%M"]:
+                for fmt in ["%d/%m/%Y, %H:%M", "%d/%m/%y, %H:%M", "%m/%d/%Y, %H:%M", "%m/%d/%y, %H:%M"]:
                     try:
                         timestamp = datetime.strptime(date_str, fmt)
                         break
