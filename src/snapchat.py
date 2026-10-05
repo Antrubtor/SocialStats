@@ -189,6 +189,9 @@ class SnapChat(SocialNetwork):
                             pseudo = sections["Basic Information"]["Username"]
                     for filename in package.namelist():
                         if filename.startswith("chat_media/") and "_" in filename:
+                            ext = os.path.splitext(filename)[1].lower()
+                            if ext not in [".mp4", ".jpg", ".jpeg", ".png", ".webp", ".gif"]:
+                                continue
                             try:
                                 media_ids_files[filename.split("_")[2].split(".")[0]] = {"filename": filename, "package_path": str(path)}
                             except IndexError:
@@ -294,11 +297,10 @@ class SnapChat(SocialNetwork):
                                 counter += 1
                             with open(out_path, "wb") as target_file:
                                 target_file.write(data)
-                            if check_no_date or "contact" in infos:
-                                if "contact" in infos:
-                                    add_metadata(out_path, dt, ext, infos["contact"], send, res)
-                                else:
-                                    add_metadata(out_path, dt, ext)
+                            if "contact" in infos:
+                                add_metadata(out_path, dt, ext, infos["contact"], send, res)
+                            else:
+                                add_metadata(out_path, dt, ext)
                         nb += 1
                 print(f"\n{nb} media exported in {os.path.join(os.getcwd(), export_folder)}")
         except Exception as e:

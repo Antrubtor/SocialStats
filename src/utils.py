@@ -327,7 +327,16 @@ def generate_excel(per_contact_stats, messages_per_day, hour_distribution, excel
 def __add_jpeg_metadata(path, dt, contact=None, send=None, res=None):
     piexif = lazy_import("piexif")
     try:
-        exif_dict = piexif.load(path)
+        try:
+            exif_dict = piexif.load(path)
+        except Exception:
+            exif_dict = {"0th": {}, "Exif": {}, "GPS": {}, "1st": {}, "thumbnail": None}
+
+        if "0th" not in exif_dict:
+            exif_dict["0th"] = {}
+        if "Exif" not in exif_dict:
+            exif_dict["Exif"] = {}
+
         date_str = dt.strftime("%Y:%m:%d %H:%M:%S")
         exif_dict["0th"][piexif.ImageIFD.DateTime] = date_str.encode('utf-8')
         exif_dict["Exif"][piexif.ExifIFD.DateTimeOriginal] = date_str.encode('utf-8')
@@ -345,9 +354,36 @@ def __add_jpeg_metadata(path, dt, contact=None, send=None, res=None):
     except Exception as e:
         print(f"[EXIF ERROR] {path}: {e}")
 
+def __add_webp_metadata(path, dt, contact=None, send=None, res=None):
+    piexif = lazy_import("piexif")
+    Image = lazy_import("PIL.Image")
+    import io
+    try:
+        date_str = dt.strftime("%Y:%m:%d %H:%M:%S")
+        zeroth = {piexif.ImageIFD.DateTime: date_str.encode('utf-8')}
+        if contact and send and res:
+            zeroth[piexif.ImageIFD.Artist] = send.encode('utf-8')
+            zeroth[piexif.ImageIFD.ImageDescription] = f"{send} to {res}".encode('utf-8')
+        elif contact:
+            zeroth[piexif.ImageIFD.Artist] = f"Contact: {contact}".encode('utf-8')
+        exif_ifd = {
+            piexif.ExifIFD.DateTimeOriginal: date_str.encode('utf-8'),
+            piexif.ExifIFD.DateTimeDigitized: date_str.encode('utf-8'),
+        }
+        exif_bytes = piexif.dump({"0th": zeroth, "Exif": exif_ifd})
+        buf = io.BytesIO()
+        with Image.open(path) as img:
+            img.save(buf, format="WEBP", exif=exif_bytes, lossless=True)
+        with open(path, "wb") as f:
+            f.write(buf.getvalue())
+    except Exception as e:
+        print(f"[WEBP ERROR] {path}: {e}")
+
 def __add_png_metadata(path, dt, contact=None, send=None, res=None):
     PngImagePlugin = lazy_import("PIL.PngImagePlugin")
     Image = lazy_import("PIL.Image")
+    piexif = lazy_import("piexif")
+    import zlib
     try:
         img = Image.open(path)
         meta = PngImagePlugin.PngInfo()
@@ -362,28 +398,123 @@ def __add_png_metadata(path, dt, contact=None, send=None, res=None):
             meta.add_text("Author", f"Contact: {contact}")
             meta.add_text("Title", f"Contact: {contact}")
         img.save(path, pnginfo=meta)
+
+        # eXIf standard chunk
+        date_str = dt.strftime("%Y:%m:%d %H:%M:%S")
+        zeroth = {piexif.ImageIFD.DateTime: date_str.encode('utf-8')}
+        if send and res:
+            zeroth[piexif.ImageIFD.Artist] = send.encode('utf-8')
+            zeroth[piexif.ImageIFD.ImageDescription] = f"{send} to {res}".encode('utf-8')
+        elif contact:
+            zeroth[piexif.ImageIFD.Artist] = f"Contact: {contact}".encode('utf-8')
+        exif_ifd = {
+            piexif.ExifIFD.DateTimeOriginal: date_str.encode('utf-8'),
+            piexif.ExifIFD.DateTimeDigitized: date_str.encode('utf-8'),
+        }
+        raw_exif = piexif.dump({"0th": zeroth, "Exif": exif_ifd})
+        if raw_exif.startswith(b"Exif\x00\x00"):
+            raw_exif = raw_exif[6:]
+
+        time_data = struct.pack(">HBBBBB", dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second)
+        time_crc = zlib.crc32(b'tIME' + time_data) & 0xffffffff
+        time_chunk = struct.pack(">I", len(time_data)) + b'tIME' + time_data + struct.pack(">I", time_crc)
+
+        with open(path, "rb") as f:
+            png_bytes = f.read()
+
+        if png_bytes.startswith(b'\x89PNG\r\n\x1a\n'):
+            out = bytearray()
+            out.extend(png_bytes[:8])
+            idx = 8
+            exif_inserted = False
+            while idx < len(png_bytes):
+                if idx + 8 > len(png_bytes):
+                    out.extend(png_bytes[idx:])
+                    break
+                l = struct.unpack(">I", png_bytes[idx:idx+4])[0]
+                t = png_bytes[idx+4:idx+8]
+                d = png_bytes[idx+8:idx+8+l]
+                c = png_bytes[idx+8+l:idx+12+l]
+                idx += 12 + l
+                if t in (b'eXIf', b'tIME'):
+                    continue
+                out.extend(struct.pack(">I", l) + t + d + c)
+                if t == b'IHDR' and not exif_inserted:
+                    chunk_type = b'eXIf'
+                    crc_val = zlib.crc32(chunk_type + raw_exif) & 0xffffffff
+                    out.extend(struct.pack(">I", len(raw_exif)) + chunk_type + raw_exif + struct.pack(">I", crc_val))
+                    out.extend(time_chunk)
+                    exif_inserted = True
+
+            with open(path, "wb") as f:
+                f.write(out)
     except Exception as e:
         print(f"[PNG ERROR] {path}: {e}")
 
 def __add_mp4_metadata(path, dt, contact=None, send=None, res=None):
+    from datetime import timezone
     try:
-        MP4 = lazy_import("mutagen.mp4").MP4
-        mp4 = MP4(path)
-        mp4["\xa9day"] = [dt.strftime("%Y-%m-%d")]
-        if send and res:
-            mp4["\xa9nam"] = [f"{send} to {res}"]
-            mp4["\xa9ART"] = [send]
-        elif contact:
-            mp4["\xa9nam"] = [f"Contact: {contact}"]
-            mp4["\xa9ART"] = [f"Contact: {contact}"]
-        mp4.save()
+        mac_epoch = datetime(1904, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+        dt_utc = dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt.astimezone(timezone.utc)
+        seconds_since_1904 = int((dt_utc - mac_epoch).total_seconds())
+
+        with open(path, "r+b") as f:
+            data = f.read()
+            # mvhd
+            idx = 0
+            while True:
+                idx = data.find(b'mvhd', idx)
+                if idx == -1:
+                    break
+                if idx + 16 <= len(data):
+                    version = data[idx + 4]
+                    f.seek(idx + 8)
+                    if version == 0:
+                        f.write(struct.pack(">II", seconds_since_1904, seconds_since_1904))
+                    elif version == 1 and idx + 24 <= len(data):
+                        f.write(struct.pack(">QQ", seconds_since_1904, seconds_since_1904))
+                idx += 4
+            # tkhd
+            idx = 0
+            while True:
+                idx = data.find(b'tkhd', idx)
+                if idx == -1:
+                    break
+                if idx + 16 <= len(data):
+                    version = data[idx + 4]
+                    f.seek(idx + 8)
+                    if version == 0:
+                        f.write(struct.pack(">II", seconds_since_1904, seconds_since_1904))
+                    elif version == 1 and idx + 24 <= len(data):
+                        f.write(struct.pack(">QQ", seconds_since_1904, seconds_since_1904))
+                idx += 4
+
+        with open(path, "rb") as f:
+            is_fragmented = b'moof' in f.read(50000)
+
+        if not is_fragmented:
+            try:
+                MP4 = lazy_import("mutagen.mp4").MP4
+                m = MP4(path)
+                m["\xa9day"] = [dt.strftime("%Y-%m-%d")]
+                if send and res:
+                    m["\xa9nam"] = [f"{send} to {res}"]
+                    m["\xa9ART"] = [send]
+                elif contact:
+                    m["\xa9nam"] = [f"Contact: {contact}"]
+                    m["\xa9ART"] = [f"Contact: {contact}"]
+                m.save()
+            except Exception:
+                pass
     except Exception as e:
         print(f"[MP4 ERROR] {path}: {e} — applying fallback.")
 
 
 def add_metadata(path, dt, ext, contact=None, send=None, res=None):
-    if ext in [".jpg", ".jpeg", ".webp"]:
+    if ext in [".jpg", ".jpeg"]:
         __add_jpeg_metadata(path, dt, contact, send, res)
+    elif ext in [".webp"]:
+        __add_webp_metadata(path, dt, contact, send, res)
     elif ext in [".png"]:
         __add_png_metadata(path, dt, contact, send, res)
     elif ext in [".mp4"]:
