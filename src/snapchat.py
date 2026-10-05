@@ -346,7 +346,12 @@ class SnapChat(SocialNetwork):
                             print("Error with data")
                             return
 
-                        m = folium.Map(location=[points[0][1], points[0][2]], zoom_start=6)
+                        m = folium.Map(
+                            location=[points[0][1], points[0][2]],
+                            zoom_start=6,
+                            tiles="https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png",
+                            attr="<a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a>"
+                        )
 
                         for i, (dt, lat, lon, orig) in enumerate(points, start=1):
                             popup_html = f"<b>{dt.isoformat()}</b><br/>{orig}"
